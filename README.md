@@ -34,11 +34,15 @@ The descriptor is **Sensemaking**. "Semantic Analysis Engine" is dropped.
 
 Sensemaking is a democratic-innovation instrument for the Pact's aims. It lets a journalist, an NGO monitor, or an electoral monitor see where a debate has polarised and turned hostile, estimate how much of a debate looks synthetically inflated, and expose a manufactured consensus, all without surveilling a single participant. It counters disinformation while protecting expression, because it reads and shows and measures, and humans decide what to say. It is self-hostable and inspectable, so an institution can trust it because it can verify it, not because it is asked to.
 
+## Who uses it, and the 2027 anchor
+
+Three concrete users, all serving the Pact's aims. A public-service newsroom such as Finland's Yle reads a surging election topic, learns whether it is organic or inflated, and publishes context or declines to amplify. A fact-checking and civil-society monitor such as Faktabaari, within the EDMO Nordic hub, finds the exact subnarrative where hostility hardens and either mounts targeted counter-speech or uses the group-level read as evidence for its own filing; the organisation reports, not the tool. An election authority such as the Finnish Ministry of Justice, which runs the 18 April 2027 vote, watches the campaign on a timeline, tells an organic surge from a manufactured one, and issues official context under a strict neutrality discipline. The same read serves all three at different depths.
+
 ## The three pillars
 
 Engine: author-agnostic by construction; free and open-source software on an open-weight model by default, self-hostable, no proprietary or black-box dependency in a default deployment; clusters public discourse by topic and stance, never by account; maps competing subnarratives at the group level; severity as a gradient, not a verdict; the machine-generated share as a figure with its interval; a pattern reported only when several independent author-agnostic signals agree; never about a group smaller than ten.
 
-Human-rights guardrails: protections architectural, not a hotfix; author identity never tracked, so there is nothing to strip and nothing to leak; minors and private citizens excluded at ingestion so no setting can reveal them; no data pooled, each institution keeps its own, only protected group-level summaries compared over encrypted shares, no central record; open cryptography on commodity hardware, no vendor as trust root, built to extend toward post-quantum; outputs are three, add context, counter a narrative, none, each more speech or no action, no takedown, flag, or referral; the team threat-modelled misuse and closed the path rather than promising not to take it.
+Human-rights guardrails: protections architectural, not a hotfix; author identity never tracked, so there is nothing to strip and nothing to leak; minors and private citizens excluded at ingestion so no setting can reveal them; no data pooled, each institution keeps its own, only protected group-level summaries compared over encrypted shares, no central record; open cryptography on commodity hardware, no vendor as trust root, built to extend toward post-quantum; outputs are three, protect the debate, add context, counter a narrative, each more speech or no action, no takedown, flag, or referral, and the tool drafts a response but never publishes it; the team threat-modelled misuse and closed the path rather than promising not to take it.
 
 Experience: a read you can understand, question, and verify; shows how it reached a reading and which signals corroborated it; shows what it does not know, the two declared severity gaps and the estimate's interval; stance and severity on separate colour-blind-safe scales; subnarratives shown in yellow as their own channel; an open, reproducible build an institution can run.
 
@@ -47,11 +51,12 @@ Experience: a read you can understand, question, and verify; shows how it reache
 - Author-agnostic by construction. No identity field anywhere. Author identity is never tracked, not stripped; privacy by absence. The honest claim is privacy by absence plus no re-identification uplift. Banned phrasing: "fail loud" and "architecturally impossible."
 - No finding about a group smaller than ten distinct items, items not accounts, enforced as a constructor invariant.
 - Minors and private citizens excluded at ingestion, so no setting can reveal them. Never a display switch.
-- Outputs limited to three: add context, counter a narrative, none. No enforcement, no takedown, flag, or referral. The tool reads, shows, measures; humans act.
+- Outputs are three, all more speech or no action: protect the debate, meaning no intervention warranted, add context, and counter a narrative. No enforcement, no takedown, flag, or referral. The tool reads, shows, measures, and drafts; humans publish. This is the proposal's three-output set with the third pole reframed from "none" to active proportionality, and the no-enforcement substance is unchanged.
+- The tool never publishes to any platform and connects to no write API. It produces evidence and drafts; humans publish through their own channels.
 - The machine-generated share is a heuristic shown with its interval, never a hard count, never a "we detect AI" capability.
 - Severity is a four-dimension schema. Derogation and threat are calibratable. Dehumanisation and incitement are declared gaps, shown without a score, never faked.
 - No scores, accuracy, or F1 while the classifier is untrained. If the two heads are trained, report only those, honestly, with intervals.
-- Data is licensed plus synthetic, never scraping, never "social media channels."
+- Data is a licensed corpus plus synthetic examples used for testing only; synthetic is never a source. A small slice of compliant live data is an MVP element if feasible. Never scraping, never "social media channels."
 - "Open" means open-weight, self-hostable, data-boundary. Never FOSS-only as a virtue. No vendor hardware or enclave as the trust root. Open cryptography on commodity hardware.
 - Deliberation, not enforcement. Institutions only. Lead with human rights and the surveillance and disinformation problem, not the synthetic-personas angle.
 
@@ -65,7 +70,7 @@ The pipeline: embed text into meaning vectors; reduce dimensions; cluster by den
 
 ## Tech lock-ins and the model starting point
 
-- Local-first. Git plus local services are the spine. Docker Compose is the dev environment and most of the reproducible build. A shared dev server is possible only if a reason forces it; the default is local, including the demo, which should run on a machine the team controls and can run offline.
+- Local-first. Git plus local services are the spine. For the demo, a local virtual environment with pinned dependencies and a one-line run script, not containers. Containerisation is deferred to post-event packaging, where it supports the reproducible-build claim. A shared dev server is possible only if a reason forces it; the default is local, including the demo, which should run on a machine the team controls and can run offline.
 - Severity base: FinBERT and the TurkuNLP Finnish toxicity model, which run locally and are the starting point. Map the model's threat output onto the threat dimension, and its insult and identity-attack outputs onto derogation. Dehumanisation and incitement stay declared gaps. The labels' output may need refinement by a small local model into readable context.
 - The reads model: a small, locally runnable, Finnish-capable open-weight model that turns classifier labels into a readable context line. Poro 34B is excluded because it does not run locally; the team tried. Shortlist to benchmark, Finnish quality first: Poro 2 8B, a quantised Llama-3.1 8B, Viking 7B, or a small Qwen. RESERVED, provisional pick pending.
 - Clustering and topics: sentence-transformers for embeddings, UMAP for reduction, HDBSCAN for clustering, BERTopic for labelled topics. Multi-topic.
@@ -87,7 +92,7 @@ The pipeline: embed text into meaning vectors; reduce dimensions; cluster by den
 ## Decisions
 
 ### Locked
-Name is Sensemaking. Lead with discourse mapping, with deliberation as the stance and a planned destination. Never-track-author architecture with the ingestion guard. Multi-topic, subnarratives in yellow as their own channel, checked for contrast against the colour-blind-safe stance and severity scales. Severity base is the TurkuNLP Finnish toxicity model, mapped as above. Local-first development. Bridging is out of scope. The full honesty floor above.
+Name is Sensemaking. Lead with discourse mapping, with deliberation as the stance and a planned destination. The deliverable is one read, rendered at three depths, from a solo advocate's single post to an institution's messaging plan; same engine and guarantees, different packaging. The output poles are the three reframed moves, protect the debate, add context, counter a narrative, and the tool drafts but never publishes. Never-track-author architecture with the ingestion guard. Multi-topic, subnarratives in yellow as their own channel, checked for contrast against the colour-blind-safe stance and severity scales. Severity base is the TurkuNLP Finnish toxicity model, mapped as above. Local-first development. Bridging is out of scope. The full honesty floor above.
 
 ### Reserved, criteria only
 The local reads model, decided on Finnish quality first, runnability local, then cost. The polarising-language threshold, resolved through governance sign-off, not by editing the constant.
@@ -96,7 +101,7 @@ The local reads model, decided on Finnish quality first, runnability local, then
 The 2024 election-period data and the live source. The licensed Suomi24 corpus ends at 2023, so it holds no 2024 election discourse, and scraping is out. Bluesky is the leading candidate for a compliant public API; Mastodon is per-instance and messier; an X aggregate service is a terms-and-floor risk to avoid. Synthetic election-period fixtures are the fallback. Live data is real people, so the ingestion guard carries more weight here than anywhere else. This research gates the showstopper.
 
 ### Open, needs planning
-Deliberation and counter-narrative. The team wants this and it is the destination, but how to make it real and have genuine impact on conversational debate needs its own planning track. For the sixty-hour build the lead is discourse mapping and visualisation; the deliberation outputs are planned, not a committed build feature. The showstopper, an election-period timeline whose exact content is being decided. The primary user and first use case, still to set.
+Deliberation and counter-narrative. The team wants this and it is the destination, but how to make it real and have genuine impact on conversational debate needs its own planning track. For the sixty-hour build the lead is discourse mapping and visualisation; the deliberation outputs are planned, not a committed build feature. The showstopper, an election-period timeline whose exact content is being decided. The MVP and showstopper anchor, to be decided in a meeting and not any one person's call: the strong candidate is the Finnish Ministry of Justice election scenario across the 18 April 2027 parliamentary vote, seen as the most high-impact and ambitious goal. Possible first collaboration partner: Faktabaari, the Finnish fact-checking service, with whom the team has direct contact; not confirmed, owner Liisi. The primary user and first use case, still to set.
 
 ## Team and lanes
 

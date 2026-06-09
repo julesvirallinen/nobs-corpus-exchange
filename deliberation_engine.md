@@ -22,7 +22,7 @@ The result is not a verdict. It is a read you can interrogate: here is the shape
 
 ## The deliberation move
 
-This is where most tools reach for a hammer. They detect something bad and they remove it, flag it, refer it. NoBS does not own a hammer. Its entire output space is three moves: add context, counter a narrative, or do nothing. More speech, or no action. There is no takedown path in the code, not as a setting, not as a feature behind a flag.
+This is where most tools reach for a hammer. They detect something bad and they remove it, flag it, refer it. NoBS does not own a hammer. Its entire output space is three moves: protect the debate when no intervention is warranted, add context, or counter a narrative. More speech, or no action. There is no takedown path in the code, not as a setting, not as a feature behind a flag, and the tool drafts a response but never publishes it; a human always posts.
 
 That constraint is not timidity, it is the product. A debate is not improved by deleting half of it; it is improved when the people in it can see what is happening and respond. So the engine's last step is to route a reading to the response that fits: a manufactured consensus gets context that exposes it, a hardening narrative gets a counter that a human can voice, an ordinary disagreement gets left alone. The engine proposes; a journalist, a moderator, an institution decides and speaks. The human is not a rubber stamp on an automated decision, because there is no automated decision to stamp.
 
