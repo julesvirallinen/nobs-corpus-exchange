@@ -1,0 +1,50 @@
+# SPINE test configuration. Deterministic hash backend + an in-config TEST
+# lexicon of MILD insults and made-up placeholder tokens. No real slurs appear
+# anywhere in this repo. Used by the pytest suite and by the synthetic data.
+
+mlm:
+  backend: hash
+  model: distilroberta-base
+  top_k: 24
+  clip: 5.0
+  include_original: true
+
+epsilon:
+  protected: skip
+  function_word: skip
+  content: 6.0
+  default: 6.0
+
+protection:
+  enabled: true
+
+normalization:
+  lowercase: true
+  collapse_whitespace: true
+  normalize_punctuation: true
+  strip_emoji: true
+  repair_elongation: true
+  fix_misspellings: true
+
+lexicon:
+  source: test
+  path: data/lexicons/hate_terms.txt
+  # Registered placeholder/mild terms. The obfuscation matcher canonicalises
+  # leet/spaced/elongated variants of these to the form listed here.
+  test_terms:
+    - zibber
+    - florbnax
+    - grumblefric
+    - dummy
+    - doofus
+    - nitwit
+  max_inter_char_gap: 2
+
+saliency:
+  enabled: false
+  model: cardiffnlp/twitter-roberta-base-hate-latest
+  threshold: 0.15
+
+stretch:
+  enabled: false
+  hard_row_min_tokens: 40

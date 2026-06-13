@@ -1,0 +1,49 @@
+# SPINE fast configuration: deterministic, NO model downloads.
+#
+# Identical to default.yaml except mlm.backend = hash. The `hash` backend is a
+# self-contained, dependency-free stand-in that produces reproducible
+# context-derived pseudo-logits so the DP machinery (clipping + exponential
+# mechanism + per-row RNG) is fully exercised without torch/transformers.
+#
+# It is NOT a language model and carries no semantic quality. Use it for the
+# test suite, plumbing checks, and verify.sh fallback — NOT for a real
+# submission (use configs/default.yaml with requirements-hf.txt for that).
+
+mlm:
+  backend: hash
+  model: distilroberta-base
+  top_k: 48
+  clip: 5.0
+  include_original: true
+
+epsilon:
+  protected: skip
+  function_word: skip
+  content: 6.0
+  default: 6.0
+
+protection:
+  enabled: true
+
+normalization:
+  lowercase: true
+  collapse_whitespace: true
+  normalize_punctuation: true
+  strip_emoji: true
+  repair_elongation: true
+  fix_misspellings: true
+
+lexicon:
+  source: real
+  path: data/lexicons/hate_terms.txt
+  test_terms: []
+  max_inter_char_gap: 2
+
+saliency:
+  enabled: false
+  model: cardiffnlp/twitter-roberta-base-hate-latest
+  threshold: 0.15
+
+stretch:
+  enabled: false
+  hard_row_min_tokens: 40

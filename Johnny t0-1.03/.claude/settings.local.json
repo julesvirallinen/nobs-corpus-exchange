@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /c/Users/joona/.SPINE)",
+      "Bash(ls -la)",
+      "Bash(pip --version)",
+      "Bash(git --version)",
+      "Bash(python -c \"import urllib.request,sys; urllib.request.urlopen\\('https://pypi.org/simple/', timeout=8\\); print\\('PYPI_OK'\\)\")",
+      "Bash(python -c \"import urllib.request; urllib.request.urlopen\\('https://huggingface.co', timeout=8\\); print\\('HF_OK'\\)\")",
+      "Bash(python -m venv .venv)",
+      "Bash(.venv/Scripts/python.exe -m pip install --upgrade pip --quiet)",
+      "Bash(.venv/Scripts/python.exe -m pip install --quiet numpy scikit-learn pyyaml pytest)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(.venv/Scripts/python.exe -m pip install --upgrade pip -q)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(.venv/Scripts/python.exe -c 'import numpy,sklearn,yaml,pytest,regex; print\\('\\\\''numpy'\\\\'',numpy.__version__\\); print\\('\\\\''sklearn'\\\\'',sklearn.__version__\\); print\\('\\\\''pyyaml'\\\\'',yaml.__version__\\); print\\('\\\\''pytest'\\\\'',pytest.__version__\\); print\\('\\\\''regex OK'\\\\''\\)')",
+      "Bash(.venv/Scripts/python.exe -m pip index versions torch)",
+      "Bash(.venv/Scripts/python.exe -m pip install torch transformers)",
+      "Bash(echo \"HEAVY_INSTALL_DONE_EXIT:$?\")",
+      "Bash(.venv/Scripts/python.exe -c 'import torch,transformers; print\\('\\\\''torch'\\\\'',torch.__version__\\); print\\('\\\\''transformers'\\\\'',transformers.__version__\\)')",
+      "Bash(.venv/Scripts/python.exe -c 'import regex; print\\('\\\\''regex'\\\\'',regex.__version__\\)')",
+      "Bash(PYTHONPATH=src .venv/Scripts/python.exe -c ' *)",
+      "Bash(PYTHONUTF8=1 PYTHONPATH=src .venv/Scripts/python.exe -c ' *)",
+      "Bash(PYTHONUTF8=1 .venv/Scripts/python.exe scripts/make_synthetic.py)",
+      "Bash(.venv/Scripts/python.exe -m wrapper.run --in data/synthetic_dev.csv --out out_spine_test.csv --mode spine --config configs/test.yaml --debug-seed DEV)",
+      "Bash(.venv/Scripts/python.exe -m harness.evaluate --original data/synthetic_dev.csv --privatized out_identity.csv --config configs/test.yaml)",
+      "Bash(PYTHONUTF8=1 .venv/Scripts/python.exe -m pytest -q)",
+      "Bash(PYTHONUTF8=1 .venv/Scripts/python.exe -m pytest)",
+      "Bash(time PYTHONUTF8=1 .venv/Scripts/python.exe -m wrapper.run --in mini.csv --out mini_hf.csv --mode spine --config configs/test.yaml --mlm-backend hf --debug-seed DEV)",
+      "Bash(PYTHONUTF8=1 .venv/Scripts/python.exe -c ' *)",
+      "Bash(PYTHONUTF8=1 .venv/Scripts/python.exe -m wrapper.run --in mini.csv --out mini_hf.csv --mode spine --config configs/test.yaml --mlm-backend hf --debug-seed DEV)",
+      "Bash(PYTHONUTF8=1 .venv/Scripts/python.exe -m harness.evaluate --original data/synthetic_dev.csv --privatized out_spine_test.csv --config configs/test.yaml --utility-backend hf)",
+      "Bash(PYTHON=.venv/Scripts/python.exe bash scripts/verify.sh)",
+      "Bash(tee verify_out_log.txt)",
+      "Bash(rm -f out_identity.csv out_dpmlm.csv out_spine.csv out_spine_test.csv mini.csv mini_hf.csv *.log.jsonl out_*.csv.log.jsonl mini*.log.jsonl verify_out_log.txt 2>/dev/null; rm -rf verify_out 2>/dev/null; printf '\\\\n# scratch / verify artifacts\\\\nverify_out/\\\\nmini*.csv\\\\nout_*.csv\\\\n*.report.json\\\\n' >> .gitignore && echo \"cleaned. remaining top-level:\" && ls -1)",
+      "Bash(.venv/Scripts/python.exe scripts/setup_lexicons.py --from-file /tmp/terms.txt)",
+      "Bash(rm -f data/lexicons/hate_terms.txt \"C:/Users/joona/AppData/Local/Temp/out.csv\" \"C:/Users/joona/AppData/Local/Temp/out.csv.log.jsonl\" /tmp/terms.txt /tmp/in.csv)"
+    ]
+  }
+}

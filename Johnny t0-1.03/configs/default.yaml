@@ -1,0 +1,60 @@
+# SPINE default configuration (the intended evaluation path).
+#
+# This config uses the REAL open-weight masked language model for the DP
+# rewrite. It requires `pip install -r requirements-hf.txt` and a one-time
+# model download. For a no-download, deterministic run (tests / quick checks)
+# use configs/fast.yaml instead, which only changes mlm.backend to "hash".
+#
+# ─────────────────────────────────────────────────────────────────────────
+# THE NOISE DIAL
+# ─────────────────────────────────────────────────────────────────────────
+# `epsilon.*` is the privacy/utility dial and is the main thing to tune
+# between submissions. LOWER epsilon = MORE noise = stronger per-token privacy
+# but lower utility. `skip` means "do not DP-rewrite this token class".
+# See README "Config & the noise dial".
+
+mlm:
+  backend: hf                # hf | hash    (hash = deterministic, no download)
+  model: distilroberta-base  # any HF AutoModelForMaskedLM checkpoint
+  top_k: 48                  # candidate set size for the exponential mechanism
+  clip: 5.0                  # logit clip magnitude C; scores live in [-C, C]
+  include_original: true     # always keep the original token in the candidate set
+
+epsilon:
+  # Per token-class privacy budget. Either a positive float (epsilon spent on
+  # that class's exponential-mechanism draw) or the string `skip` (kept as-is).
+  protected: skip            # hate-carrying tokens: canonicalised, never resampled
+  function_word: skip        # function/stop words: kept to preserve grammar
+  content: 6.0               # the style-bearing remainder -> THE dial
+  default: 6.0               # fallback for unclassified content tokens
+
+protection:
+  enabled: true              # spine mode. dpmlm mode sets this false (uniform budget)
+
+normalization:
+  lowercase: true
+  collapse_whitespace: true
+  normalize_punctuation: true
+  strip_emoji: true
+  repair_elongation: true    # sooo -> so
+  fix_misspellings: true
+
+lexicon:
+  source: real               # real | test
+  # Path to a downloaded lexicon (one canonical term per line). Fetched by
+  # scripts/setup_lexicons.py; NOT committed. If missing, spine still runs but
+  # protects nothing and says so loudly.
+  path: data/lexicons/hate_terms.txt
+  test_terms: []             # used only when source == test
+  max_inter_char_gap: 2      # obfuscation matcher: max separator chars between letters
+
+saliency:
+  # Optional: token saliency from a small open-weight hate classifier to mark
+  # additional salient tokens beyond the lexicon. Off by default (extra cost).
+  enabled: false
+  model: cardiffnlp/twitter-roberta-base-hate-latest
+  threshold: 0.15
+
+stretch:
+  enabled: false             # candidate-selection layer (scaffold only)
+  hard_row_min_tokens: 40    # rows considered "hard"

@@ -1,0 +1,76 @@
+"""Differentially-private selection: clipping + the exponential mechanism.
+
+This is the only step with a formal privacy claim. Given a vector of candidate
+scores (clipped MLM logits) ``u`` with each ``u_i`` in ``[-C, C]`` (so the score
+range, i.e. the sensitivity of the selection's utility to a one-candidate change,
+is ``Δ = 2C``), the exponential mechanism samples candidate ``i`` with
+
+    P(i) ∝ exp( ε · u_i / (2 · Δ) ).
+
+This selection satisfies ε-differential privacy *with respect to the clipped
+score vector*. Clipping is what bounds Δ and hence makes ε meaningful; it is
+always applied before the softmax. See README "Privacy claim (narrow)" and
+arXiv:2407.00637 (DP-MLM, Meisenbacher et al.) for the construction this follows.
+
+Large ε  -> the softmax concentrates on the argmax (utility-preserving).
+Small ε  -> the distribution approaches uniform over the candidate set (private).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import List, Sequence, Tuple
+
+import numpy as np
+
+
+def clip_logits(logits: np.ndarray, clip: float) -> np.ndarray:
+    """Clip scores into the bounded range [-clip, clip]."""
+    return np.clip(np.asarray(logits, dtype=np.float64), -abs(clip), abs(clip))
+
+
+def exponential_weights(clipped_scores: np.ndarray, epsilon: float,
+                        sensitivity: float) -> np.ndarray:
+    """Exponential-mechanism probabilities over ALREADY-CLIPPED scores.
+
+    Numerically stable. ``sensitivity`` is Δ (the score range, = 2·clip).
+    """
+    scores = np.asarray(clipped_scores, dtype=np.float64)
+    if scores.size == 0:
+        return scores
+    if sensitivity <= 0:
+        sensitivity = 1.0
+    scale = float(epsilon) / (2.0 * sensitivity)
+    z = scores * scale
+    z = z - np.max(z)
+    w = np.exp(z)
+    total = w.sum()
+    if not np.isfinite(total) or total <= 0:
+        return np.full(scores.shape, 1.0 / scores.size)
+    return w / total
+
+
+@dataclass
+class Selection:
+    index: int
+    probs: np.ndarray
+    clipped: np.ndarray
+    epsilon: float
+
+
+def select_index(raw_scores: Sequence[float], epsilon: float, clip: float,
+                 rng: np.random.Generator) -> Selection:
+    """Clip ``raw_scores``, build exponential-mechanism probabilities at ``epsilon``
+    and draw one index with ``rng``. ``sensitivity`` is fixed at ``2·clip``."""
+    clipped = clip_logits(np.asarray(raw_scores, dtype=np.float64), clip)
+    sensitivity = 2.0 * abs(clip)
+    probs = exponential_weights(clipped, epsilon, sensitivity)
+    idx = int(rng.choice(len(probs), p=probs))
+    return Selection(index=idx, probs=probs, clipped=clipped, epsilon=float(epsilon))
+
+
+def select(candidates: Sequence[str], raw_scores: Sequence[float], epsilon: float,
+           clip: float, rng: np.random.Generator) -> Tuple[str, Selection]:
+    """Convenience wrapper returning (chosen_candidate, Selection)."""
+    sel = select_index(raw_scores, epsilon, clip, rng)
+    return candidates[sel.index], sel
