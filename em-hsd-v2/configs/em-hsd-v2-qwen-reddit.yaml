@@ -1,4 +1,6 @@
-# Qwen on real Reddit dev set (no committed slur lexicon — protection off; hate floor via proxy)
+# EM-HSD 2.0 + Unsloth Qwen3.5-0.8B on Reddit dev set (data/reddit_25_TKDeVb4.csv)
+# protection off — no committed slur lexicon; hate floor via proxy scorer
+# Use conda env: lum  (torch 2.6+cu118, see scripts/setup_conda_env.sh)
 
 mlm:
   backend: hash
@@ -47,9 +49,9 @@ em_hsd_v2:
   use_refined_delta_u: true
 
 generation:
-  backend: transformers
-  model: Qwen/Qwen2.5-0.5B-Instruct
-  load_in_4bit: false
+  backend: unsloth
+  model: unsloth/Qwen3.5-0.8B
+  load_in_4bit: true
   max_new_tokens: 192
 
 embedding:

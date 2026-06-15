@@ -19,6 +19,17 @@ Output only the rewritten post.
 Post: {text}"""
 
 
+def _tokenize_prompt(tokenizer, formatted: str, device):
+    """Tokenize chat text; Qwen3-VL processors treat positional args as images."""
+    import torch
+
+    try:
+        inputs = tokenizer(text=formatted, return_tensors="pt")
+    except TypeError:
+        inputs = tokenizer(formatted, return_tensors="pt")
+    return inputs.to(device)
+
+
 def _cuda_usable() -> bool:
     """Return True only if CUDA kernels can actually run (GTX 1060 / sm_61 may fail)."""
     try:
@@ -167,7 +178,7 @@ class TransformersQwenProposer:
             attempts += 1
             seed = int(self._rng.integers(2**31))
             torch.manual_seed(seed)
-            inputs = tokenizer(formatted, return_tensors="pt").to(device)
+            inputs = _tokenize_prompt(tokenizer, formatted, device)
             with torch.no_grad():
                 generated = model.generate(
                     **inputs,
@@ -197,6 +208,9 @@ class UnslothQwenProposer:
     def _load(self):
         if self._model is not None:
             return
+        import os
+        # GTX 10xx (sm_61): Triton/inductor compile fails at generation time.
+        os.environ.setdefault("TORCHDYNAMO_DISABLE", "1")
         import torch
         from unsloth import FastLanguageModel
 
@@ -258,7 +272,7 @@ class UnslothQwenProposer:
             attempts += 1
             seed = int(self._rng.integers(2**31))
             torch.manual_seed(seed)
-            inputs = tokenizer(formatted, return_tensors="pt").to(model.device)
+            inputs = _tokenize_prompt(tokenizer, formatted, model.device)
             with torch.no_grad():
                 generated = model.generate(
                     **inputs,
