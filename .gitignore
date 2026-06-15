@@ -3,3 +3,5 @@ models/
 __pycache__/
 *.pyc
 .DS_Store
+Johnny t0-1.03/unsloth_compiled_cache/
+em-hsd-v2/unsloth_compiled_cache/

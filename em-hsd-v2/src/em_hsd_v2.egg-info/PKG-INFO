@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: em-hsd-v2
+Version: 0.1.0
+Summary: EM-HSD 2.0 layer-4 privatization (imports privhsd-spine from Johnny t0-1.03)
+Requires-Python: >=3.10
+Requires-Dist: numpy
+Requires-Dist: scikit-learn
+Requires-Dist: pyyaml
+Requires-Dist: regex
+Provides-Extra: hf
+Requires-Dist: torch; extra == "hf"
+Requires-Dist: transformers; extra == "hf"
+Requires-Dist: sentence-transformers; extra == "hf"
+Provides-Extra: emhsd
+Requires-Dist: unsloth; extra == "emhsd"
+Provides-Extra: test
+Requires-Dist: pytest; extra == "test"

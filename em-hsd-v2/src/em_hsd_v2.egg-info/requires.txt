@@ -1,0 +1,15 @@
+numpy
+scikit-learn
+pyyaml
+regex
+
+[emhsd]
+unsloth
+
+[hf]
+torch
+transformers
+sentence-transformers
+
+[test]
+pytest
