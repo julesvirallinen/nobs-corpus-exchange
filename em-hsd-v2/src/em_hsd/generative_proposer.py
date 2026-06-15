@@ -19,6 +19,18 @@ Output only the rewritten post.
 Post: {text}"""
 
 
+def _cuda_usable() -> bool:
+    """Return True only if CUDA kernels can actually run (GTX 1060 / sm_61 may fail)."""
+    try:
+        import torch
+        if not torch.cuda.is_available():
+            return False
+        torch.zeros(1, device="cuda")
+        return True
+    except Exception:
+        return False
+
+
 class GenerativeProposer(Protocol):
     def bind(self, rng: np.random.Generator, protected_terms: Sequence[str]) -> None:
         ...
@@ -92,7 +104,7 @@ class TransformersQwenProposer:
         if self._tokenizer.pad_token is None:
             self._tokenizer.pad_token = self._tokenizer.eos_token
 
-        use_cuda = torch.cuda.is_available()
+        use_cuda = _cuda_usable()
         try:
             if use_cuda and gen.load_in_4bit:
                 from transformers import BitsAndBytesConfig
@@ -189,8 +201,8 @@ class UnslothQwenProposer:
         from unsloth import FastLanguageModel
 
         gen = self.config.generation
-        use_4bit = gen.load_in_4bit and torch.cuda.is_available()
-        if gen.load_in_4bit and not torch.cuda.is_available():
+        use_4bit = gen.load_in_4bit and _cuda_usable()
+        if gen.load_in_4bit and not _cuda_usable():
             print(
                 "WARN: CUDA unavailable — loading Qwen in bf16/fp16 on CPU (slow).",
                 flush=True,
