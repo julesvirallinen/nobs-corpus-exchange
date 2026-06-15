@@ -41,7 +41,7 @@ class EmHsdV2Settings:
 @dataclass
 class GenerationSettings:
     backend: str = "mock"
-    model: str = "unsloth/Qwen3.5-2B"
+    model: str = "unsloth/Qwen3.5-0.8B"
     load_in_4bit: bool = True
     max_new_tokens: int = 256
 

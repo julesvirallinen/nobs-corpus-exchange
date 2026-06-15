@@ -211,6 +211,7 @@ class UnslothQwenProposer:
             model_name=gen.model,
             max_seq_length=2048,
             load_in_4bit=use_4bit,
+            fast_inference=False,
         )
         if not use_4bit:
             kwargs["load_in_4bit"] = False
