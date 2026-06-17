@@ -1,0 +1,118 @@
+%% TRIAGE-DP operational model — Layers 1–4 (Layer 4 = EM-HSD v2)
+%% Edit in https://mermaid.js.org/ or any Mermaid-compatible editor
+
+flowchart TB
+  %% ── INPUTS ──────────────────────────────────────────────
+  subgraph INPUTS["Information inputs"]
+    IN_CSV["CSV rows: ID, Author, Text, HS"]
+    IN_CFG["Frozen config θ from Layer 3\n(τ_H, τ_A, ε per quadrant, ε₁/ε₂ for Layer 4)"]
+    IN_MODELS["Local models\nhate probe, authorship probe, DP-MLM, Qwen paraphraser"]
+  end
+
+  %% ── ETHICAL SAFEGUARDS ──────────────────────────────────
+  subgraph SAFE["Ethical safeguards (embedded)"]
+    SG1["Author-blind: mechanism reads Text only"]
+    SG2["Mechanism ≠ harness (no label leakage into sanitizer)"]
+    SG3["Hate-preservation constraints (Q3/Q1; Layer 4 hate floor)"]
+    SG4["Formal DP where claimed; honest limits on normalization"]
+    SG5["Audit trail: token triage + row-level JSONL"]
+    SG6["Fail-safe: Layer 4 fallback to ε₁-private x^priv"]
+  end
+
+  %% ── LAYER 3 (OFFLINE) ────────────────────────────────────
+  subgraph L3["Layer 3 — TO-calibrated budget optimizer (offline)"]
+    L3_DEV["Dev split CSV"]
+    L3_SEARCH["Search θ: maximize TO = U_ratio − P_ratio"]
+    L3_OUT["Export frozen θ + privacy dial 1–5"]
+    L3_DEV --> L3_SEARCH --> L3_OUT
+  end
+
+  %% ── RUNTIME PIPELINE ────────────────────────────────────
+  subgraph RUNTIME["Runtime sanitization (per row)"]
+    PRE["Deterministic normalization\n+ lexicon span marking + canonicalize"]
+
+    subgraph L1["Layer 1 — Cross-saliency token triage"]
+      L1_H["H(t): hate occlusion saliency\nP_hate(T) − P_hate(T \\ {t})"]
+      L1_A["A(t): authorship occlusion saliency\nconf(T) − conf(T \\ {t})"]
+      L1_Q["Quadrant routing Q1–Q4\ncompare H(t), A(t) to τ_H, τ_A"]
+      L1_H --> L1_Q
+      L1_A --> L1_Q
+    end
+
+    subgraph L2["Layer 2 — Stylometric priors"]
+      L2_B["Biber-style feature tags\nboost A(t) on identity carriers\n(discourse openers, situational refs, etc.)"]
+    end
+
+    subgraph TOKEN_DP["Token-level DP substrate (Layers 1–2 routed)"]
+      Q1["Q1: high H + high A → canonicalize obfuscated slurs"]
+      Q2["Q2: low H + high A → aggressive DP-MLM (ε_Q2)"]
+      Q3["Q3: high H + low A → protect hate evidence (skip DP)"]
+      Q4["Q4: low H + low A → skip / normalize only"]
+      DPMLM["DP-MLM exponential mechanism\nper-token candidate selection"]
+      L1_Q --> Q1 & Q2 & Q3 & Q4
+      Q1 & Q2 --> DPMLM
+    end
+
+    GATE{"Hard row?\nlong post OR\ninsufficient token-level privacy gain"}
+
+    subgraph L4["Layer 4 — EM-HSD v2 (sentence-level)"]
+      L4_P1A["Phase 1a: ε₁ token sanitize\nnon-protected tokens → x^priv"]
+      L4_P1B["Phase 1b: local LLM k paraphrases\nfrom x^priv (Qwen/Unsloth)"]
+      L4_P1C["Phase 1c: near-duplicate prune τ_dup"]
+      L4_F["Filter: spans + hate floor δ\n+ semantic floor τ_sem"]
+      L4_S["Score u(y) = clip(P_hate(y))\nrefined Δu sensitivity"]
+      L4_P2["Phase 2: ε₂ exponential mechanism\nselect best candidate"]
+      L4_FB["Fallback: output x^priv"]
+      L4_P1A --> L4_P1B --> L4_P1C --> L4_F --> L4_S --> L4_P2
+      L4_F -->|"< 2 valid candidates"| L4_FB
+    end
+
+    OUT_TEXT["Privatized text x̃"]
+    PRE --> L1_H
+    PRE --> L1_A
+    L2_B --> L1_A
+    DPMLM --> GATE
+    Q3 & Q4 --> GATE
+    GATE -->|No| OUT_TEXT
+    GATE -->|Yes| L4_P1A
+    L4_P2 --> OUT_TEXT
+    L4_FB --> OUT_TEXT
+  end
+
+  %% ── OUTPUTS ─────────────────────────────────────────────
+  subgraph OUTPUTS["Outputs generated"]
+    OUT_CSV["Sanitized CSV\n(same rows; Text replaced; ID/Author/HS preserved)"]
+    OUT_TOKEN_LOG["Token audit log\nH(t), A(t), quadrant, action, ε, reason"]
+    OUT_ROW_LOG["Row JSONL audit (Layer 4)\nε₁/ε₂, candidates, filters, fallback"]
+    OUT_CKPT["Checkpoint file (optional)\nresume long batch runs"]
+  end
+
+  %% ── OFFLINE EVAL (SEPARATE) ───────────────────────────────
+  subgraph EVAL["Offline evaluation harness (separate)"]
+    EV_U["Utility: hate macro-F1\noriginal vs sanitized"]
+    EV_P["Privacy: authorship re-ID top-1\noriginal vs sanitized"]
+    EV_TO["Trade-Off TO"]
+    EV_U --> EV_TO
+    EV_P --> EV_TO
+  end
+
+  %% ── CONNECTIONS ───────────────────────────────────────────
+  IN_CSV -->|Text only| PRE
+  L3_OUT --> IN_CFG
+  IN_CFG --> L1_Q & TOKEN_DP & L4
+  IN_MODELS --> L1_H & L1_A & DPMLM & L4_P1B & L4_S
+
+  OUT_TEXT --> OUT_CSV
+  L1_Q --> OUT_TOKEN_LOG
+  L4_P2 & L4_FB --> OUT_ROW_LOG
+  OUT_CSV --> OUT_CKPT
+
+  IN_CSV --> EVAL
+  OUT_CSV --> EVAL
+
+  SG1 -.-> PRE
+  SG2 -.-> EVAL
+  SG3 -.-> L1_Q & L4_F
+  SG4 -.-> TOKEN_DP & L4
+  SG5 -.-> OUT_TOKEN_LOG & OUT_ROW_LOG
+  SG6 -.-> L4_FB

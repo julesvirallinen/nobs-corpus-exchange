@@ -1,8 +1,6 @@
 # Layer 1 — Cross-Saliency Token Triage
 
-Detailed design document for **TRIAGE-DP**. See the overview in [`../TRIAGE-DP.md`](../TRIAGE-DP.md).
-
----
+Detailed design document for **TRIAGE-DP**.
 
 ## 1. Purpose and role in the stack
 
@@ -70,7 +68,8 @@ Same **structure**, different **operationalization** for IA-HSD.
 ## 3. Core concept: occlusion saliency
 
 ### 3.1 Definition
-
+"For each token: “How much does this specific word matter for what we care about?”
+The importance of a token is measured in the context of the full sentence, using a model that reads the whole text — not from an isolated word list.
 For probe score function `S(text)` and token `t`:
 
 ```
