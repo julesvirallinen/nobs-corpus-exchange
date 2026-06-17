@@ -1,5 +1,5 @@
 # EM-HSD 2.0 + Unsloth Qwen3.5-0.8B on Reddit dev set (data/reddit_25_TKDeVb4.csv)
-# protection off — no committed slur lexicon; hate floor via proxy scorer
+# Run: python Johnny\ t0-1.03/scripts/setup_lexicons.py  (once, before first use)
 # Use conda env: lum  (torch 2.6+cu118, see scripts/setup_conda_env.sh)
 
 mlm:
@@ -16,7 +16,7 @@ epsilon:
   default: 6.0
 
 protection:
-  enabled: false
+  enabled: true
 
 normalization:
   lowercase: true
@@ -27,7 +27,7 @@ normalization:
   fix_misspellings: true
 
 lexicon:
-  source: test
+  source: real
   path: ../Johnny t0-1.03/data/lexicons/hate_terms.txt
   test_terms: []
   max_inter_char_gap: 2

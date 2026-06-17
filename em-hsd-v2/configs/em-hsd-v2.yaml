@@ -1,4 +1,5 @@
-# EM-HSD 2.0 production config (Unsloth Qwen3.5-2B + hash MLM for ε₁ tests use test yaml)
+# EM-HSD 2.0 production config (Unsloth Qwen3.5-2B)
+# Lexicon: run Johnny t0-1.03/scripts/setup_lexicons.py once before first use.
 
 mlm:
   backend: hf
@@ -42,6 +43,7 @@ utility:
   label_threshold: 0.5
 
 em_hsd_v2:
+  deployment_mode: standalone
   epsilon_total: 18.0
   epsilon_split: 0.5
   k_generate: 6

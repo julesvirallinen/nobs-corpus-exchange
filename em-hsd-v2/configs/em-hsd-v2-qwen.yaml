@@ -26,15 +26,9 @@ normalization:
   fix_misspellings: true
 
 lexicon:
-  source: test
+  source: real
   path: ../Johnny t0-1.03/data/lexicons/hate_terms.txt
-  test_terms:
-    - zibber
-    - florbnax
-    - grumblefric
-    - dummy
-    - doofus
-    - nitwit
+  test_terms: []
   max_inter_char_gap: 2
 
 saliency:

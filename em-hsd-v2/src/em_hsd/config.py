@@ -15,6 +15,7 @@ from mechanism.config import Config, config_from_dict
 
 @dataclass
 class EmHsdV2Settings:
+    deployment_mode: str = "standalone"
     epsilon_total: float = 18.0
     epsilon_split: float = 0.5
     k_generate: int = 6
@@ -31,11 +32,19 @@ class EmHsdV2Settings:
 
     @property
     def epsilon_1(self) -> float:
+        if self.deployment_mode == "composed":
+            return 0.0
         return self.epsilon_total * self.epsilon_split
 
     @property
     def epsilon_2(self) -> float:
+        if self.deployment_mode == "composed":
+            return self.epsilon_total
         return self.epsilon_total * self.epsilon_split
+
+    @property
+    def skip_phase_1a(self) -> bool:
+        return self.deployment_mode == "composed"
 
 
 @dataclass
@@ -81,7 +90,11 @@ class EmHsdConfig:
 
 def _parse_em_settings(d: dict) -> EmHsdV2Settings:
     em = d.get("em_hsd_v2", {}) or {}
+    mode = str(em.get("deployment_mode", "standalone")).lower()
+    if mode not in ("standalone", "composed"):
+        raise ValueError(f"em_hsd_v2.deployment_mode must be standalone or composed, got {mode!r}")
     return EmHsdV2Settings(
+        deployment_mode=mode,
         epsilon_total=float(em.get("epsilon_total", 18.0)),
         epsilon_split=float(em.get("epsilon_split", 0.5)),
         k_generate=int(em.get("k_generate", 6)),

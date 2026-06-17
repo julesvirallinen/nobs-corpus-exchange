@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .config import EmHsdConfig
-from .constraints import filter_candidates
+from .constraints import filter_candidates, protected_skeletons
 from .dp_select import select_rewrite
 from .generative_proposer import get_proposer
 from .prune_candidates import prune_candidates
@@ -15,29 +15,58 @@ from .token_sanitize import token_sanitize
 from .utility_scorer import get_scorer
 
 
-def privatize_em_hsd_v2(text: str, config: EmHsdConfig) -> Tuple[str, Dict[str, Any]]:
-    """Privatise one Text string. Returns (output, audit_dict)."""
+def privatize_em_hsd_v2(
+    text: str,
+    config: EmHsdConfig,
+    *,
+    original_text: Optional[str] = None,
+    protected_spans: Optional[Sequence[str]] = None,
+    upstream_token_log: Optional[Sequence[Any]] = None,
+) -> Tuple[str, Dict[str, Any]]:
+    """Privatise one Text string. Returns (output, audit_dict).
+
+    Standalone (default): ``text`` is raw ``x``; runs full ε₁ + paraphrase + EM.
+
+    Composed (TRIAGE-DP L1–L4): ``text`` is token-sanitized ``T′``;
+    pass ``original_text=x`` for hate/semantic floors; optional
+    ``protected_spans`` from Layer 1 audit; ``upstream_token_log`` merged into audit.
+    """
     if config.spine.rng is None:
         raise ValueError(
             "config.spine.rng must be set before privatize_em_hsd_v2"
         )
 
     em = config.em_hsd_v2
+    reference = original_text if original_text is not None else text
     epsilon_1 = em.epsilon_1
     epsilon_2 = em.epsilon_2
-    delta_u = selection_sensitivity(text, em.use_refined_delta_u)
+    delta_u = selection_sensitivity(reference, em.use_refined_delta_u)
 
-    x_priv, token_log = token_sanitize(text, config, epsilon_1)
-    canonicals, skels = protected_canonicals(text, config)
+    if em.skip_phase_1a:
+        x_priv = text
+        token_log: List[Any] = list(upstream_token_log or [])
+    else:
+        x_priv, token_log = token_sanitize(text, config, epsilon_1)
+        if upstream_token_log:
+            token_log = list(upstream_token_log) + list(token_log)
+
+    if protected_spans is not None:
+        canonicals = sorted({c for c in protected_spans if c and str(c).strip()})
+        skels = protected_skeletons(canonicals)
+    else:
+        canonicals, skels = protected_canonicals(reference, config)
 
     audit: Dict[str, Any] = {
         "mode": "em-hsd-v2",
+        "deployment_mode": em.deployment_mode,
         "epsilon_total": em.epsilon_total,
         "epsilon_1": epsilon_1,
         "epsilon_2": epsilon_2,
+        "epsilon_1_spent_here": epsilon_1,
         "delta_u": delta_u,
         "delta_u_naive": 1.0,
         "x_priv": x_priv,
+        "reference_text": reference[:500] if reference != text else None,
         "protected_terms": canonicals,
         "token_log": token_log,
         "fallback": False,
@@ -52,7 +81,7 @@ def privatize_em_hsd_v2(text: str, config: EmHsdConfig) -> Tuple[str, Dict[str, 
     proposer = get_proposer(config)
     proposer.bind(config.spine.rng, canonicals)
     scorer = get_scorer(config)
-    hsd_orig = scorer.analyze(text)
+    hsd_orig = scorer.analyze(reference)
     hsd_x_priv = scorer.analyze(x_priv)
     audit["P_hate_original"] = hsd_orig.p_hate
     audit["P_hate_x_priv"] = hsd_x_priv.p_hate
@@ -77,7 +106,7 @@ def privatize_em_hsd_v2(text: str, config: EmHsdConfig) -> Tuple[str, Dict[str, 
     audit["k_after_prune"] = len(pruned)
 
     batch = filter_candidates(
-        pruned, text, x_priv, skels, config, scorer, encoder,
+        pruned, reference, x_priv, skels, config, scorer, encoder,
     )
     audit["filter_details"] = [
         {

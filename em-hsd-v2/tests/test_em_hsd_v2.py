@@ -26,7 +26,9 @@ def test_full_pipeline_returns_non_empty(cfg):
     )
     assert isinstance(out, str) and out.strip()
     assert audit["mode"] == "em-hsd-v2"
+    assert audit["deployment_mode"] == "standalone"
     assert audit["epsilon_1"] == audit["epsilon_2"]
+    assert audit["epsilon_1_spent_here"] == audit["epsilon_1"]
     assert audit["utility_backend"] == "proxy"
     assert "P_hate_original" in audit
     assert "P_hate_x_priv" in audit
@@ -97,6 +99,7 @@ def test_em_hsd_does_not_import_harness():
 
 def test_load_config(cfg):
     assert cfg.generation.backend == "mock"
+    assert cfg.em_hsd_v2.deployment_mode == "standalone"
     assert cfg.em_hsd_v2.k_generate == 4
     assert cfg.utility.backend == "proxy"
     assert cfg.utility.model == "unitary/unbiased-toxic-roberta"
@@ -151,3 +154,38 @@ def test_derive_severity_tiers():
 
     severity_mild, _ = _derive_severity({"toxicity": 0.25}, 0.25)
     assert severity_mild == "mild"
+
+
+def test_composed_mode_skips_phase_1a():
+    composed = load_em_hsd_config(str(ROOT / "configs" / "em-hsd-v2-composed.yaml"))
+    composed.spine.rng = make_row_rng(10, run_seed="test")
+    raw = "Stop being such a dummy and read the instructions before you ask."
+    t_prime = "stop being such a dummy and read the instructions before you ask."
+    out, audit = privatize_em_hsd_v2(
+        t_prime,
+        composed,
+        original_text=raw,
+        protected_spans=["dummy"],
+        upstream_token_log=[{"token": "stop", "action": "sanitized"}],
+    )
+    assert isinstance(out, str) and out.strip()
+    assert audit["deployment_mode"] == "composed"
+    assert audit["epsilon_1"] == 0.0
+    assert audit["epsilon_1_spent_here"] == 0.0
+    assert audit["epsilon_2"] == composed.em_hsd_v2.epsilon_total
+    assert audit["x_priv"] == t_prime
+    assert audit["protected_terms"] == ["dummy"]
+    assert audit["reference_text"] == raw[:500]
+    assert len(audit["token_log"]) >= 1
+
+
+def test_composed_mode_external_protected_spans():
+    composed = load_em_hsd_config(str(ROOT / "configs" / "em-hsd-v2-composed.yaml"))
+    composed.spine.rng = make_row_rng(11, run_seed="test")
+    _, audit = privatize_em_hsd_v2(
+        "you are a dummy fool",
+        composed,
+        original_text="You are a dummy fool",
+        protected_spans=["dummy", "fool"],
+    )
+    assert set(audit["protected_terms"]) == {"dummy", "fool"}

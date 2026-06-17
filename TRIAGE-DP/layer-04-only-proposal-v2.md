@@ -1,8 +1,8 @@
-# EM-HSD 2.0: Layer-4-Only Proposal (v2)
+# EM-HSD 2.0: Layer 4 Proposal (v2)
 
 **Constrained-Candidate Differential Privacy for Identity-Agnostic Hate Speech Detection**
 
-PrivRewrite-informed upgrade of [layer-04-only-proposal.md](layer-04-only-proposal.md) (v1). Alternative submission track to full [TRIAGE-DP](TRIAGE-DP.md). See also [`layer-05-rights-architecture.md`](layer-05-rights-architecture.md).
+PrivRewrite-informed upgrade of [layer-04-only-proposal.md](layer-04-only-proposal.md) (v1). **Dual-mode:** runs **standalone** (Layer-4-only submission track) or **composed** inside full [TRIAGE-DP](TRIAGE-DP.md) (Layers 1–3 token pass → EM-HSD v2 on hard rows). See also [`layer-05-rights-architecture.md`](layer-05-rights-architecture.md) and [`layer-04-sentence-level-em.md`](layer-04-sentence-level-em.md).
 
 ---
 
@@ -30,6 +30,8 @@ PrivRewrite-informed upgrade of [layer-04-only-proposal.md](layer-04-only-propos
 
 **Claim:** PrivRewrite’s **structure** (two-phase, candidates, tight sensitivity) with **IA-HSD utility** (hate classifier, not semantic similarity) and **local** deployment (no black-box API).
 
+**Deployment:** Same codebase, two runtime profiles — see **§3.3**.
+
 ---
 
 ## 0. Changelog from v1
@@ -52,9 +54,16 @@ v1 remains a valid **minimal baseline**; v2 is the **recommended submission spec
 
 ## 1. Motivation
 
-### 1.1 Why Layer-4-only still
+### 1.1 Why Layer 4 (standalone and composed)
 
-Same rationale as v1: one path for all rows, O(k) cost, ~6–8 hyperparameters, strongest **execution** story vs full TRIAGE-DP.
+EM-HSD 2.0 is the **Layer 4 engine** for TRIAGE-DP, not only a fork:
+
+| Mode | When | Role |
+|------|------|------|
+| **Standalone** | Ship fast; no Layers 1–3 | Full pipeline on raw `x` for **every row** |
+| **Composed** | Full TRIAGE-DP stack | Sentence-level pass on **hard rows** after Layers 1–3 produce **T′** |
+
+Standalone keeps one path, O(k) cost, ~8 hyperparameters, strongest **execution** story. Composed adds phrase-level privacy where token-level triage leaves residual stylometry ([`layer-04-sentence-level-em.md`](layer-04-sentence-level-em.md) §9).
 
 ### 1.2 Why upgrade with PrivRewrite learnings
 
@@ -103,7 +112,9 @@ TO = (Utility_protected / Utility_original) − (Privacy_protected / Privacy_ori
 
 ## 3. Architecture
 
-### 3.1 Pipeline (all rows)
+### 3.1 Pipeline (standalone — all rows)
+
+When `deployment_mode: standalone`, every row runs the full pipeline below. In **composed** mode, Phase 1a (ε₁) is skipped; input is **T′** and Phases 1b–2 run unchanged (§3.3).
 
 ```mermaid
 flowchart TB
@@ -135,6 +146,119 @@ flowchart TB
 | Hate utility scoring | 2 pre | No |
 | Exponential mechanism selection | 2 | **Yes (ε₂)** |
 | Fallback to x^priv | Post | Preserves ε₁ |
+
+### 3.3 Deployment modes (standalone vs composed)
+
+EM-HSD 2.0 is **one module**, two entry contracts. Config key: `em_hsd_v2.deployment_mode: standalone | composed`.
+
+#### Mode A — Standalone (Layer-4-only track)
+
+**Input:** raw text `x` from CSV. **All rows** take the full §3.1 pipeline.
+
+```mermaid
+flowchart LR
+    x[Raw x] --> L4[EM-HSD v2 full pipeline]
+    L4 --> out[Output x_tilde]
+```
+
+| Property | Value |
+|----------|--------|
+| Rows | 100% |
+| Phase 1a ε₁ | **On** (non-protected tokens) |
+| Lexicon / normalize | **Inside** EM-HSD (same as SPINE pre-pass) |
+| Layers 1–3 | **Not required** |
+| CLI | `--mode em-hsd-v2` / `em-hsd-run` |
+| Primary use | Hackathon execution track, ablations, dpmlm comparison |
+
+#### Mode B — Composed (inside TRIAGE-DP L1–L4)
+
+**Input:** token-sanitized text **T′** after Layers 1–3; optional upstream context from Layer 1 audit.
+
+```mermaid
+flowchart TB
+    x[Raw x]
+    L123["Layers 1–3: H(t), A(t), triage, token DP → T′"]
+    gate{Hard row?}
+    passthrough[T′ unchanged]
+    L4["EM-HSD v2 composed:\n skip ε₁, paraphrase T′ → EM"]
+    out[Output]
+
+    x --> L123 --> gate
+    gate -->|no| passthrough --> out
+    gate -->|yes| L4 --> out
+```
+
+| Property | Standalone | Composed |
+|----------|------------|----------|
+| Input to L4 | Raw `x` | **T′** (post token pass) |
+| Phase 1a ε₁ | Run on `x` | **Skip** (ε already spent in L1–3) |
+| Paraphrase input | `x^priv` | **T′** (treat as sanitized view) |
+| Protected spans | Lexicon on `x` | **Layer 1 log** (preferred) or lexicon on original |
+| Hate floor δ | `P_hate(y) ≥ P_hate(x) − δ` | Same vs **original `x`** (not T′) |
+| Semantic floor | vs original `x` | vs original `x` |
+| Privacy budget | ε_total = ε₁ + ε₂ | **ε_sentence** (= ε₂ only at L4); token ε in L1–3 log |
+| Row coverage | All rows | **Gated** (~10–30% hard rows; see [`layer-04-sentence-level-em.md`](layer-04-sentence-level-em.md) §2) |
+
+**Integration API (target):**
+
+```python
+# Standalone
+privatize_em_hsd_v2(text=x, config=config)
+
+# Composed (called from triage-dp orchestrator after token pass)
+privatize_em_hsd_v2(
+    text=T_prime,
+    config=config,  # deployment_mode: composed
+    original_text=x,
+    protected_spans=l1_audit["protected_spans"],  # optional
+    upstream_token_log=l1_audit["token_log"],     # optional merge
+)
+```
+
+**Orchestrator hook (full stack):**
+
+```python
+T_prime, token_log = triage_dp_token_pass(x, config)
+if config.stretch.enabled and is_hard(T_prime, x, config):
+    T_out, l4_audit = privatize_em_hsd_v2(
+        T_prime, config,
+        original_text=x,
+        protected_spans=extract_protected(token_log),
+    )
+else:
+    T_out = T_prime
+```
+
+See [`triage-dp-layers-1-4-operational-model.mmd`](triage-dp-layers-1-4-operational-model.mmd).
+
+#### Shared core (both modes)
+
+Unchanged between modes:
+
+- Phase 1b–1c: k paraphrases + τ_dup prune  
+- Phase 2: span + hate floor + sem floor + EM (ε₂)  
+- Fallback to input sanitized view (`x^priv` standalone, **T′** composed)  
+- Audit schema (mode field records `standalone` | `composed`)
+
+#### What composed mode does **not** duplicate
+
+| Layer 1–3 responsibility | EM-HSD v2 in composed mode |
+|--------------------------|----------------------------|
+| H(t), A(t), Q1–Q4 routing | **Skip** — already applied in T′ |
+| Token-level DP (Q2) | **Skip** — ε₁ not re-run |
+| Biber boosts (L2) | **Skip** |
+| θ calibration (L3) | L3 sets `epsilon_sentence`; L4 uses ε₂ slice |
+
+#### Lexicon in both modes
+
+| Source | Standalone | Composed |
+|--------|------------|----------|
+| Protected spans | `mechanism/lexicon.py` on raw `x` | **Prefer** Layer 1 audit list; fallback lexicon on `x` |
+| Canonicalize before ε₁ | Yes | N/A (T′ already canonicalized Q1 tokens) |
+| Span filter on candidates | Canonical skeleton ⊆ `y` | Same |
+| Proposer `{protected_list}` | From lexicon hits | From L1 log or lexicon |
+
+Aligns with [TRIAGE-DP.md](TRIAGE-DP.md) Appendix B: standalone ≈ SPINE lexicon path + L4; composed = measured triage + L4 on hard rows only.
 
 ---
 
@@ -274,7 +398,9 @@ Pr[select y] ∝ exp( ε₂ · u_x(y) / (2 · Δu) )
 
 **Theorem (EM-HSD 2.0, composition).** Phase 1 satisfies ε₁-DP; Phase 2 satisfies ε₂-DP; sequential composition → **(ε₁ + ε₂)-DP** for final output x̃ (unless fallback returns x^priv only → ε₁-DP still valid).
 
-Report **ε_total = ε₁ + ε₂** in audit log; default split **ε₁ = ε₂ = ε_total / 2**.
+Report **ε_total = ε₁ + ε₂** in audit log; default split **ε₁ = ε₂ = ε_total / 2** (standalone).
+
+**Composed mode (TRIAGE-DP L1–L4):** token ε is spent in Layers 1–3; Layer 4 spends **ε_sentence = ε₂ only** (`epsilon_split: 1.0` in config). Audit records `deployment_mode: composed`, `epsilon_1_spent_here: 0`, and merges upstream token log when provided. End-to-end privacy is **token ε (L1–3) + ε_sentence (L4)** under sequential composition across orchestrator stages.
 
 ### 5.5 Fallback — **upgraded in v2**
 
@@ -292,7 +418,9 @@ Report **ε_total = ε₁ + ε₂** in audit log; default split **ε₁ = ε₂ 
 
 ```yaml
 em_hsd_v2:
-  epsilon_total: 18.0       # user dial; split below
+  deployment_mode: standalone   # standalone | composed (with TRIAGE-DP L1–3)
+  epsilon_total: 18.0           # standalone: ε₁+ε₂; composed: ε_sentence (ε₂ only)
+  epsilon_split: 0.5            # standalone: ε₁=ε₂=half; composed: use 1.0       # user dial; split below
   epsilon_split: 0.5        # ε₁ = ε₂ = epsilon_total * split
 
   # Phase 1
@@ -321,6 +449,17 @@ generation:
 embedding:
   model: sentence-transformers/all-MiniLM-L6-v2  # prune + token sanitize
 ```
+
+**Composed profile** (`configs/em-hsd-v2-composed.yaml`):
+
+```yaml
+em_hsd_v2:
+  deployment_mode: composed
+  epsilon_total: 9.0      # sentence budget only (ε₂)
+  epsilon_split: 1.0      # skip ε₁ at Layer 4
+```
+
+Call with `original_text=x`, `text=T_prime`, optional `protected_spans` from Layer 1 audit.
 
 ### 6.1 User-facing privacy dial (levels 1–5)
 
@@ -369,9 +508,11 @@ Calibrate on dev holdout; grid primarily **{ε_total, k, δ}**.
 ```json
 {
   "mode": "em-hsd-v2",
+  "deployment_mode": "standalone",
   "epsilon_total": 18.0,
   "epsilon_1": 9.0,
   "epsilon_2": 9.0,
+  "epsilon_1_spent_here": 9.0,
   "delta_u": 0.038,
   "delta_u_naive": 1.0,
   "k_generated": 6,
@@ -516,9 +657,12 @@ Demo script: show **x → x^priv → 3 candidates → selected** with reject rea
 | Near-duplicate prune | `stretch/prune_candidates.py` | **Build** |
 | Filters + scorer | `stretch/constraints.py`, `utility_scorer.py` | **Build** |
 | Refined Δu | `stretch/sensitivity.py` | **Build** |
-| Orchestrator | `stretch/em_hsd_v2.py` | **Build** |
-| Config | `configs/em-hsd-v2.yaml` | **Build** |
-| CLI | `wrapper/run.py --mode em-hsd-v2` | **Build** |
+| Orchestrator | `em_hsd/em_hsd_v2.py` | Done |
+| Composed entry | `privatize_em_hsd_v2(..., original_text=, protected_spans=)` | Done |
+| Config standalone | `configs/em-hsd-v2.yaml` | Done |
+| Config composed | `configs/em-hsd-v2-composed.yaml` | Done |
+| CLI standalone | `em-hsd-run` / `em_hsd_cli/run.py` | Done |
+| CLI full stack | `wrapper/run.py --mode triage-dp` | **Build** |
 | Calibrate | `harness/calibrate_em.py` | **Build** |
 | Tests | `tests/test_em_hsd_v2.py` | **Build** |
 
@@ -561,7 +705,7 @@ python -m harness.calibrate_em --dev dev.csv \
 | **dpmlm** | Token-uniform competitor; we add sentence candidates + hate EM |
 | **GPT naive** | Negative baseline |
 | **EM-HSD v1** | Ablated subset (no ε₁, no prune, selection-only claim) |
-| **Full TRIAGE-DP** | Higher novelty; v2 wins on ship speed |
+| **Full TRIAGE-DP** | Composed mode on hard rows; standalone wins on ship speed |
 | **Loiseau adaptive prompts** | Optional offline §15; complements v2, does not replace ε-DP |
 
 **Public name:** **EM-HSD 2.0** or **IA-HSD-PrivRewrite** (internal).
@@ -787,6 +931,11 @@ Report TO, F1, re-ID, valid-candidate rate, fallback rate for both.
 
 ## 17. Recommendation
 
-**Ship EM-HSD 2.0** as the primary Layer-4-only submission track. Keep **v1** as ablation “selection-only, no ε₁.” Run **A6 (semantic-only EM)** early — if it fails on TO, that validates the design for judges and the research note in one experiment.
+**Ship EM-HSD 2.0** as both:
+
+1. **Standalone** (`deployment_mode: standalone`) — primary Layer-4-only submission track; all rows, full ε₁+ε₂.  
+2. **Composed** (`deployment_mode: composed`) — plug into TRIAGE-DP after token pass on hard rows; ε_sentence only at Layer 4.
+
+Keep **v1** as ablation “selection-only, no ε₁.” Run **A6 (semantic-only EM)** early — if it fails on TO, that validates the design for judges and the research note in one experiment.
 
 **Adaptive layer (§15):** enable if dev time allows after core v2 works — start with **prompt grid** (5–10 templates), upgrade to **GEPA** only if hand prompt underperforms on TO. A9 (hand vs optimized Π) is the key ablation for the research note.

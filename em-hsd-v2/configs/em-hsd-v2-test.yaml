@@ -48,6 +48,7 @@ utility:
   label_threshold: 0.5
 
 em_hsd_v2:
+  deployment_mode: standalone
   epsilon_total: 18.0
   epsilon_split: 0.5
   k_generate: 4
