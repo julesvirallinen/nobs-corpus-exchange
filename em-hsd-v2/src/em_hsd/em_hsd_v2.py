@@ -52,10 +52,12 @@ def privatize_em_hsd_v2(text: str, config: EmHsdConfig) -> Tuple[str, Dict[str, 
     proposer = get_proposer(config)
     proposer.bind(config.spine.rng, canonicals)
     scorer = get_scorer(config)
-    p_orig = float(scorer.score(text))
-    p_x_priv = float(scorer.score(x_priv))
-    audit["P_hate_original"] = p_orig
-    audit["P_hate_x_priv"] = p_x_priv
+    hsd_orig = scorer.analyze(text)
+    hsd_x_priv = scorer.analyze(x_priv)
+    audit["P_hate_original"] = hsd_orig.p_hate
+    audit["P_hate_x_priv"] = hsd_x_priv.p_hate
+    audit["hsd_original"] = hsd_orig.to_dict()
+    audit["hsd_x_priv"] = hsd_x_priv.to_dict()
     audit["utility_backend"] = config.utility.backend
     audit["utility_model"] = getattr(scorer, "name", config.utility.model)
 
@@ -67,6 +69,7 @@ def privatize_em_hsd_v2(text: str, config: EmHsdConfig) -> Tuple[str, Dict[str, 
     except Exception as exc:
         audit["fallback"] = True
         audit["fallback_reason"] = f"proposer_error:{exc}"
+        audit["hsd_output"] = hsd_x_priv.to_dict()
         return x_priv, audit
 
     audit["k_generated"] = len(raw_candidates)
@@ -83,6 +86,10 @@ def privatize_em_hsd_v2(text: str, config: EmHsdConfig) -> Tuple[str, Dict[str, 
             "reject": d.reject,
             "p_hate": d.p_hate,
             "sem_cos": d.sem_cos,
+            "severity": d.severity,
+            "severity_score": d.severity_score,
+            "hs_labels": d.hs_labels,
+            "labels": d.label_probs,
         }
         for d in batch.details
     ]
@@ -97,17 +104,46 @@ def privatize_em_hsd_v2(text: str, config: EmHsdConfig) -> Tuple[str, Dict[str, 
             rng=config.spine.rng, sensitivity=delta_u,
         )
         audit["candidates"] = [
-            {"text": c[:200], "score": s, "selected": c == chosen}
+            {
+                "text": c[:200],
+                "score": s,
+                "selected": c == chosen,
+                **next(
+                    (
+                        {
+                            "severity": d.severity,
+                            "severity_score": d.severity_score,
+                            "hs_labels": d.hs_labels,
+                            "labels": d.label_probs,
+                        }
+                        for d in batch.details
+                        if d.valid and d.candidate == c
+                    ),
+                    {},
+                ),
+            }
             for c, s in zip(valid, scores)
         ]
         audit["selection_probs"] = sel.probs.tolist()
+        audit["hsd_output"] = scorer.analyze(chosen).to_dict()
         return chosen, audit
 
     if len(valid) == 1:
-        audit["candidates"] = [{"text": valid[0][:200], "score": scores[0], "selected": True}]
+        d0 = next(d for d in batch.details if d.valid)
+        audit["candidates"] = [{
+            "text": valid[0][:200],
+            "score": scores[0],
+            "selected": True,
+            "severity": d0.severity,
+            "severity_score": d0.severity_score,
+            "hs_labels": d0.hs_labels,
+            "labels": d0.label_probs,
+        }]
         audit["selection_probs"] = [1.0]
+        audit["hsd_output"] = hsd_x_priv.to_dict() if valid[0] == x_priv else scorer.analyze(valid[0]).to_dict()
         return valid[0], audit
 
     audit["fallback"] = True
     audit["fallback_reason"] = "no_valid_candidates"
+    audit["hsd_output"] = hsd_x_priv.to_dict()
     return x_priv, audit

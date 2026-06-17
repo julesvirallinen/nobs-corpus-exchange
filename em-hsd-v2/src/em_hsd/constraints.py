@@ -8,7 +8,7 @@ from typing import List, Sequence, Tuple
 import regex as re
 
 from .config import EmHsdConfig
-from .utility_scorer import _skeleton
+from .utility_scorer import _skeleton, HsdAnalysis
 
 
 @dataclass
@@ -18,6 +18,10 @@ class FilterResult:
     reject: str = ""
     p_hate: float = 0.0
     sem_cos: float = 0.0
+    severity: str = "none"
+    severity_score: float = 0.0
+    hs_labels: List[str] = field(default_factory=list)
+    label_probs: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -78,6 +82,33 @@ def normalized_edit_ratio(a: str, b: str) -> float:
     return dist / max(len(a), len(b), 1)
 
 
+def _analyze(scorer: object, text: str) -> HsdAnalysis:
+    if hasattr(scorer, "analyze"):
+        return scorer.analyze(text)
+    p = float(scorer.score(text))
+    return HsdAnalysis(p_hate=p, labels={"toxicity": p}, hs_labels=[], severity="none", severity_score=p)
+
+
+def _result_from_analysis(
+    candidate: str,
+    valid: bool,
+    reject: str,
+    analysis,
+    sem_cos: float = 0.0,
+) -> FilterResult:
+    return FilterResult(
+        candidate=candidate,
+        valid=valid,
+        reject=reject,
+        p_hate=float(analysis.p_hate),
+        sem_cos=sem_cos,
+        severity=str(analysis.severity),
+        severity_score=float(analysis.severity_score),
+        hs_labels=list(analysis.hs_labels),
+        label_probs=dict(analysis.labels),
+    )
+
+
 def filter_candidates(
     candidates: Sequence[str],
     original: str,
@@ -88,7 +119,8 @@ def filter_candidates(
     encoder: object,
 ) -> FilterBatch:
     em = config.em_hsd_v2
-    p_orig = float(scorer.score(original))
+    orig = _analyze(scorer, original)
+    p_orig = float(orig.p_hate)
     batch = FilterBatch()
 
     for cand in candidates:
@@ -100,28 +132,29 @@ def filter_candidates(
             batch.details.append(FilterResult(cand, False, "span"))
             continue
 
-        p_hate = float(scorer.score(cand))
+        cand_hsd = _analyze(scorer, cand)
+        p_hate = float(cand_hsd.p_hate)
         if p_hate < p_orig - em.hate_floor_delta:
-            batch.details.append(FilterResult(cand, False, "hate_floor", p_hate))
+            batch.details.append(_result_from_analysis(cand, False, "hate_floor", cand_hsd))
             continue
 
         sem = float(encoder.cosine(original, cand))
         if sem < em.tau_sem_min:
-            batch.details.append(FilterResult(cand, False, "sem_floor", p_hate, sem))
+            batch.details.append(_result_from_analysis(cand, False, "sem_floor", cand_hsd, sem))
             continue
 
         len_ratio = len(cand) / max(len(original), 1)
         if len_ratio < 0.4 or len_ratio > 2.5:
-            batch.details.append(FilterResult(cand, False, "length", p_hate, sem))
+            batch.details.append(_result_from_analysis(cand, False, "length", cand_hsd, sem))
             continue
 
         edit = normalized_edit_ratio(cand, original)
         if edit < em.min_edit_ratio:
-            batch.details.append(FilterResult(cand, False, "min_edit", p_hate, sem))
+            batch.details.append(_result_from_analysis(cand, False, "min_edit", cand_hsd, sem))
             continue
 
         batch.valid.append(cand)
         batch.scores.append(p_hate)
-        batch.details.append(FilterResult(cand, True, "", p_hate, sem))
+        batch.details.append(_result_from_analysis(cand, True, "", cand_hsd, sem))
 
     return batch

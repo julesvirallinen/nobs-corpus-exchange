@@ -57,6 +57,7 @@ class UtilitySettings:
     backend: str = "hf"
     model: str = "unitary/unbiased-toxic-roberta"
     score_label: str = "toxicity"
+    label_threshold: float = 0.5
 
 
 @dataclass
@@ -121,6 +122,7 @@ def _parse_utility(d: dict) -> UtilitySettings:
         backend=str(util.get("backend", "hf")),
         model=str(util.get("model", "unitary/unbiased-toxic-roberta")),
         score_label=str(util.get("score_label", "toxicity")),
+        label_threshold=float(util.get("label_threshold", 0.5)),
     )
 
 

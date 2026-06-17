@@ -11,7 +11,7 @@ from em_hsd import load_em_hsd_config, privatize_em_hsd_v2
 from em_hsd.constraints import filter_candidates, protected_skeletons, spans_preserved
 from em_hsd.dp_select import select_rewrite
 from em_hsd.sensitivity import refined_delta_u
-from em_hsd.utility_scorer import ProxyHateScorer, _score_from_logits
+from em_hsd.utility_scorer import ProxyHateScorer, analyze_from_logits, _derive_severity
 from em_hsd.embedding import SimpleEncoder
 from mechanism.rng import make_row_rng
 
@@ -30,6 +30,11 @@ def test_full_pipeline_returns_non_empty(cfg):
     assert audit["utility_backend"] == "proxy"
     assert "P_hate_original" in audit
     assert "P_hate_x_priv" in audit
+    assert "hsd_original" in audit
+    assert "hsd_output" in audit
+    assert audit["hsd_original"]["severity"] in ("none", "mild", "moderate", "severe")
+    assert isinstance(audit["hsd_original"]["hs_labels"], list)
+    assert isinstance(audit["hsd_original"]["labels"], dict)
 
 
 def test_spans_preserved_rejects_missing_protected():
@@ -96,6 +101,7 @@ def test_load_config(cfg):
     assert cfg.utility.backend == "proxy"
     assert cfg.utility.model == "unitary/unbiased-toxic-roberta"
     assert cfg.utility.score_label == "toxicity"
+    assert cfg.utility.label_threshold == 0.5
 
 
 def test_production_config_utility_hf():
@@ -104,7 +110,7 @@ def test_production_config_utility_hf():
     assert prod.utility.model == "unitary/unbiased-toxic-roberta"
 
 
-def test_multilabel_score_from_logits():
+def test_multilabel_analyze_from_logits():
     import torch
     from types import SimpleNamespace
 
@@ -114,9 +120,34 @@ def test_multilabel_score_from_logits():
             0: "toxicity",
             1: "severe_toxicity",
             2: "obscene",
+            3: "insult",
         },
     )
-    logits = torch.tensor([2.0, -1.0, 0.0])
-    score = _score_from_logits(logits, config, "toxicity", torch)
-    expected = float(torch.sigmoid(torch.tensor(2.0)))
-    assert abs(score - expected) < 1e-6
+    logits = torch.tensor([2.0, 1.5, 0.0, 0.8])
+    hsd = analyze_from_logits(logits, config, "toxicity", 0.5, torch)
+    expected_tox = float(torch.sigmoid(torch.tensor(2.0)))
+    assert abs(hsd.p_hate - expected_tox) < 1e-6
+    assert "toxicity" in hsd.labels
+    assert "severe_toxicity" in hsd.labels
+    assert "toxicity" in hsd.hs_labels
+    assert hsd.severity in ("moderate", "severe", "mild")
+
+
+def test_proxy_analyze_hs_labels():
+    scorer = ProxyHateScorer(["dummy"])
+    hsd = scorer.analyze("you are a dummy")
+    assert hsd.p_hate > 0.5
+    assert "toxicity" in hsd.hs_labels
+    assert hsd.severity != "none"
+
+
+def test_derive_severity_tiers():
+    severity, score = _derive_severity(
+        {"toxicity": 0.9, "severe_toxicity": 0.75, "threat": 0.1},
+        0.9,
+    )
+    assert severity == "severe"
+    assert score >= 0.75
+
+    severity_mild, _ = _derive_severity({"toxicity": 0.25}, 0.25)
+    assert severity_mild == "mild"
