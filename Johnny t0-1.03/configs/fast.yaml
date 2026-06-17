@@ -41,7 +41,7 @@ lexicon:
 
 saliency:
   enabled: false
-  model: cardiffnlp/twitter-roberta-base-hate-latest
+  model: unitary/unbiased-toxic-roberta
   threshold: 0.15
 
 stretch:

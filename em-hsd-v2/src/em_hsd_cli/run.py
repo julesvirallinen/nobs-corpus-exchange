@@ -7,7 +7,7 @@ import json
 import os
 import sys
 import time
-from typing import Optional
+from typing import List, Optional
 
 from em_hsd import load_em_hsd_config, privatize_em_hsd_v2
 from em_hsd import spine_bootstrap as _spine_bootstrap  # noqa: F401 — path setup
@@ -19,6 +19,7 @@ from em_hsd.csv_compat import (
     read_csv_compat,
 )
 from em_hsd.resources import init_spine_resources
+from em_hsd.utility_scorer import get_scorer
 
 from mechanism.rng import make_row_rng
 
@@ -103,6 +104,8 @@ def run(
     debug_seed: Optional[str] = None,
     log_path: Optional[str] = None,
     resume: bool = True,
+    utility_backend: Optional[str] = None,
+    utility_model: Optional[str] = None,
 ) -> int:
     try:
         fieldnames, rows, column_map = read_csv_compat(in_path)
@@ -115,6 +118,11 @@ def run(
 
     cfg_path = resolve_config_path(config_path)
     config = load_em_hsd_config(cfg_path)
+
+    if utility_backend is not None:
+        config.utility.backend = utility_backend
+    if utility_model is not None:
+        config.utility.model = utility_model
 
     if debug_seed is not None:
         print(
@@ -130,6 +138,16 @@ def run(
     except Exception as exc:
         print(f"ERROR: could not initialise resources: {exc}", file=sys.stderr)
         return 4
+
+    if config.utility.backend == "hf":
+        try:
+            get_scorer(config)
+        except ImportError as exc:
+            print(f"ERROR: hf utility backend requires torch/transformers: {exc}", file=sys.stderr)
+            return 4
+        except Exception as exc:
+            print(f"ERROR: could not load utility model: {exc}", file=sys.stderr)
+            return 4
 
     log_path = log_path or _default_log_path(out_path)
     ckpt_path = _checkpoint_path(out_path)
@@ -233,6 +251,19 @@ def build_parser() -> argparse.ArgumentParser:
         default=True,
         help="resume from checkpoint if output was interrupted (default: on)",
     )
+    p.add_argument(
+        "--utility-backend",
+        dest="utility_backend",
+        choices=("proxy", "hf"),
+        default=None,
+        help="override config utility.backend (proxy|hf)",
+    )
+    p.add_argument(
+        "--utility-model",
+        dest="utility_model",
+        default=None,
+        help="override config utility.model (HF model id)",
+    )
     return p
 
 
@@ -245,6 +276,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         debug_seed=args.debug_seed,
         log_path=args.log_path,
         resume=args.resume,
+        utility_backend=args.utility_backend,
+        utility_model=args.utility_model,
     )
 
 

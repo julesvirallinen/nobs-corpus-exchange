@@ -34,6 +34,12 @@ lexicon:
 
 saliency:
   enabled: false
+  model: unitary/unbiased-toxic-roberta
+
+utility:
+  backend: hf
+  model: unitary/unbiased-toxic-roberta
+  score_label: toxicity
 
 em_hsd_v2:
   epsilon_total: 18.0

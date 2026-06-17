@@ -38,8 +38,13 @@ lexicon:
 
 saliency:
   enabled: false
-  model: cardiffnlp/twitter-roberta-base-hate-latest
+  model: unitary/unbiased-toxic-roberta
   threshold: 0.15
+
+utility:
+  backend: proxy
+  model: unitary/unbiased-toxic-roberta
+  score_label: toxicity
 
 em_hsd_v2:
   epsilon_total: 18.0

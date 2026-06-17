@@ -16,8 +16,7 @@ import sys
 
 MLM = "distilroberta-base"
 CLASSIFIERS = [
-    "cardiffnlp/twitter-roberta-base-hate-latest",
-    "Hate-speech-CNERG/dehatebert-mono-english",
+    "unitary/unbiased-toxic-roberta",
 ]
 
 

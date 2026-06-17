@@ -53,6 +53,13 @@ class EmbeddingSettings:
 
 
 @dataclass
+class UtilitySettings:
+    backend: str = "hf"
+    model: str = "unitary/unbiased-toxic-roberta"
+    score_label: str = "toxicity"
+
+
+@dataclass
 class EmHsdConfig:
     """SPINE mechanism config plus EM-HSD v2 layer settings."""
 
@@ -60,6 +67,7 @@ class EmHsdConfig:
     em_hsd_v2: EmHsdV2Settings = field(default_factory=EmHsdV2Settings)
     generation: GenerationSettings = field(default_factory=GenerationSettings)
     embedding: EmbeddingSettings = field(default_factory=EmbeddingSettings)
+    utility: UtilitySettings = field(default_factory=UtilitySettings)
 
     @property
     def rng(self):
@@ -107,6 +115,15 @@ def _parse_embedding(d: dict) -> EmbeddingSettings:
     )
 
 
+def _parse_utility(d: dict) -> UtilitySettings:
+    util = d.get("utility", {}) or {}
+    return UtilitySettings(
+        backend=str(util.get("backend", "hf")),
+        model=str(util.get("model", "unitary/unbiased-toxic-roberta")),
+        score_label=str(util.get("score_label", "toxicity")),
+    )
+
+
 def load_em_hsd_config(path: str) -> EmHsdConfig:
     cfg_path = Path(path).resolve()
     with open(cfg_path, "r", encoding="utf-8") as fh:
@@ -129,6 +146,7 @@ def load_em_hsd_config(path: str) -> EmHsdConfig:
         em_hsd_v2=_parse_em_settings(data),
         generation=_parse_generation(data),
         embedding=_parse_embedding(data),
+        utility=_parse_utility(data),
     )
 
 

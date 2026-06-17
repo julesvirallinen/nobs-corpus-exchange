@@ -11,7 +11,7 @@ from em_hsd import load_em_hsd_config, privatize_em_hsd_v2
 from em_hsd.constraints import filter_candidates, protected_skeletons, spans_preserved
 from em_hsd.dp_select import select_rewrite
 from em_hsd.sensitivity import refined_delta_u
-from em_hsd.utility_scorer import ProxyHateScorer
+from em_hsd.utility_scorer import ProxyHateScorer, _score_from_logits
 from em_hsd.embedding import SimpleEncoder
 from mechanism.rng import make_row_rng
 
@@ -27,6 +27,9 @@ def test_full_pipeline_returns_non_empty(cfg):
     assert isinstance(out, str) and out.strip()
     assert audit["mode"] == "em-hsd-v2"
     assert audit["epsilon_1"] == audit["epsilon_2"]
+    assert audit["utility_backend"] == "proxy"
+    assert "P_hate_original" in audit
+    assert "P_hate_x_priv" in audit
 
 
 def test_spans_preserved_rejects_missing_protected():
@@ -90,3 +93,30 @@ def test_em_hsd_does_not_import_harness():
 def test_load_config(cfg):
     assert cfg.generation.backend == "mock"
     assert cfg.em_hsd_v2.k_generate == 4
+    assert cfg.utility.backend == "proxy"
+    assert cfg.utility.model == "unitary/unbiased-toxic-roberta"
+    assert cfg.utility.score_label == "toxicity"
+
+
+def test_production_config_utility_hf():
+    prod = load_em_hsd_config(str(ROOT / "configs" / "em-hsd-v2.yaml"))
+    assert prod.utility.backend == "hf"
+    assert prod.utility.model == "unitary/unbiased-toxic-roberta"
+
+
+def test_multilabel_score_from_logits():
+    import torch
+    from types import SimpleNamespace
+
+    config = SimpleNamespace(
+        problem_type="multi_label_classification",
+        id2label={
+            0: "toxicity",
+            1: "severe_toxicity",
+            2: "obscene",
+        },
+    )
+    logits = torch.tensor([2.0, -1.0, 0.0])
+    score = _score_from_logits(logits, config, "toxicity", torch)
+    expected = float(torch.sigmoid(torch.tensor(2.0)))
+    assert abs(score - expected) < 1e-6

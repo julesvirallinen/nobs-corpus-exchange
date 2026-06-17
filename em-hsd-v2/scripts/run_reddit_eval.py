@@ -22,7 +22,7 @@ def main() -> int:
     p.add_argument("--in", dest="in_path", default=str(DEFAULT_IN))
     p.add_argument("--out", dest="out_path", default=str(DEFAULT_OUT))
     p.add_argument("--config", default=str(DEFAULT_CONFIG))
-    p.add_argument("--utility-backend", default="proxy", choices=["proxy", "hf"])
+    p.add_argument("--utility-backend", default="hf", choices=["proxy", "hf"])
     p.add_argument("--skip-privatize", action="store_true")
     p.add_argument("--skip-eval", action="store_true")
     p.add_argument("--no-resume", action="store_true")
@@ -37,6 +37,7 @@ def main() -> int:
             "--in", args.in_path,
             "--out", args.out_path,
             "--config", args.config,
+            "--utility-backend", args.utility_backend,
         ]
         if args.no_resume:
             cmd.append("--no-resume")

@@ -52,7 +52,7 @@ saliency:
   # Optional: token saliency from a small open-weight hate classifier to mark
   # additional salient tokens beyond the lexicon. Off by default (extra cost).
   enabled: false
-  model: cardiffnlp/twitter-roberta-base-hate-latest
+  model: unitary/unbiased-toxic-roberta
   threshold: 0.15
 
 stretch:

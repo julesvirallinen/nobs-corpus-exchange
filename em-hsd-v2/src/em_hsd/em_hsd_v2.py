@@ -51,7 +51,13 @@ def privatize_em_hsd_v2(text: str, config: EmHsdConfig) -> Tuple[str, Dict[str, 
 
     proposer = get_proposer(config)
     proposer.bind(config.spine.rng, canonicals)
-    scorer = get_scorer(config, backend="proxy")
+    scorer = get_scorer(config)
+    p_orig = float(scorer.score(text))
+    p_x_priv = float(scorer.score(x_priv))
+    audit["P_hate_original"] = p_orig
+    audit["P_hate_x_priv"] = p_x_priv
+    audit["utility_backend"] = config.utility.backend
+    audit["utility_model"] = getattr(scorer, "name", config.utility.model)
 
     from .embedding import get_encoder
     encoder = get_encoder(config)

@@ -8,7 +8,7 @@ from pathlib import Path
 SPINE = Path(__file__).resolve().parents[1].parent / "Johnny t0-1.03" / "scripts" / "setup_models.py"
 
 MLM = "distilroberta-base"
-HATE = "cardiffnlp/twitter-roberta-base-hate-latest"
+HATE = "unitary/unbiased-toxic-roberta"
 EMBED = "sentence-transformers/all-MiniLM-L6-v2"
 QWEN = "unsloth/Qwen3.5-2B"
 
