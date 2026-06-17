@@ -50,7 +50,7 @@ class EmHsdV2Settings:
 @dataclass
 class GenerationSettings:
     backend: str = "mock"
-    model: str = "unsloth/Qwen3.5-0.8B"
+    model: str = "unsloth/Qwen3.5-0.8B-GGUF"
     load_in_4bit: bool = True
     max_new_tokens: int = 256
 
@@ -115,7 +115,7 @@ def _parse_generation(d: dict) -> GenerationSettings:
     gen = d.get("generation", {}) or {}
     return GenerationSettings(
         backend=str(gen.get("backend", "mock")),
-        model=str(gen.get("model", "unsloth/Qwen3.5-2B")),
+        model=str(gen.get("model", "unsloth/Qwen3.5-0.8B-GGUF")),
         load_in_4bit=bool(gen.get("load_in_4bit", True)),
         max_new_tokens=int(gen.get("max_new_tokens", 256)),
     )

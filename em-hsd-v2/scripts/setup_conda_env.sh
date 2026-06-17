@@ -56,7 +56,7 @@ import unsloth  # noqa: F401
 print("unsloth ok")
 PY
 
-echo "==> Pre-download Qwen3.5-0.8B"
+echo "==> Pre-download Qwen3.5-0.8B-GGUF"
 python - <<'PY'
 import torch
 from unsloth import FastLanguageModel
@@ -65,7 +65,7 @@ if torch.cuda.is_available():
     torch.zeros(1, device="cuda")
     use_4bit = True
 model, tok = FastLanguageModel.from_pretrained(
-    model_name="unsloth/Qwen3.5-0.8B",
+    model_name="unsloth/Qwen3.5-0.8B-GGUF",
     max_seq_length=2048,
     load_in_4bit=use_4bit,
     fast_inference=False,
@@ -73,7 +73,7 @@ model, tok = FastLanguageModel.from_pretrained(
 FastLanguageModel.for_inference(model)
 # VL tokenizer: positional args are images
 out = tok(text="Hello", return_tensors="pt")
-print("Qwen3.5-0.8B loaded OK (4bit=" + str(use_4bit) + ", tokens=" + str(out["input_ids"].shape) + ")")
+print("Qwen3.5-0.8B-GGUF loaded OK (4bit=" + str(use_4bit) + ", tokens=" + str(out["input_ids"].shape) + ")")
 PY
 
 echo ""

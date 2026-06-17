@@ -65,7 +65,7 @@ em_hsd_v2:
 
 generation:
   backend: mock
-  model: unsloth/Qwen3.5-2B
+  model: unsloth/Qwen3.5-0.8B-GGUF
   load_in_4bit: true
   max_new_tokens: 256
 

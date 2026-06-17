@@ -1,4 +1,4 @@
-# EM-HSD 2.0 production config (Unsloth Qwen3.5-2B)
+# EM-HSD 2.0 production config (Unsloth Qwen3.5-0.8B-GGUF)
 # Lexicon: run Johnny t0-1.03/scripts/setup_lexicons.py once before first use.
 
 mlm:
@@ -60,7 +60,7 @@ em_hsd_v2:
 
 generation:
   backend: unsloth
-  model: unsloth/Qwen3.5-2B
+  model: unsloth/Qwen3.5-0.8B-GGUF
   load_in_4bit: true
   max_new_tokens: 256
 

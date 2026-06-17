@@ -1,4 +1,4 @@
-# EM-HSD 2.0 + Unsloth Qwen3.5-0.8B on Reddit dev set (data/reddit_25_TKDeVb4.csv)
+# EM-HSD 2.0 + Unsloth Qwen3.5-0.8B-GGUF on Reddit dev set (data/reddit_25_TKDeVb4.csv)
 # Run: python Johnny\ t0-1.03/scripts/setup_lexicons.py  (once, before first use)
 # Use conda env: lum  (torch 2.6+cu118, see scripts/setup_conda_env.sh)
 
@@ -57,7 +57,7 @@ em_hsd_v2:
 
 generation:
   backend: unsloth
-  model: unsloth/Qwen3.5-0.8B
+  model: unsloth/Qwen3.5-0.8B-GGUF
   load_in_4bit: true
   max_new_tokens: 192
 

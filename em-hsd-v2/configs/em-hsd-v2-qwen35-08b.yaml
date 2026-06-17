@@ -1,4 +1,4 @@
-# EM-HSD 2.0 + Unsloth Qwen3.5-0.8B (GTX 1060 friendly)
+# EM-HSD 2.0 + Unsloth Qwen3.5-0.8B-GGUF (GTX 1060 friendly)
 # Use with conda env: em-hsd-qwen  (see scripts/setup_conda_env.sh)
 
 mlm:
@@ -56,7 +56,7 @@ em_hsd_v2:
 
 generation:
   backend: unsloth
-  model: unsloth/Qwen3.5-0.8B
+  model: unsloth/Qwen3.5-0.8B-GGUF
   load_in_4bit: true
   max_new_tokens: 128
 

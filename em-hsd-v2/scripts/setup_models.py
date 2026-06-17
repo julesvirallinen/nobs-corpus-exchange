@@ -10,7 +10,7 @@ SPINE = Path(__file__).resolve().parents[1].parent / "Johnny t0-1.03" / "scripts
 MLM = "distilroberta-base"
 HATE = "unitary/unbiased-toxic-roberta"
 EMBED = "sentence-transformers/all-MiniLM-L6-v2"
-QWEN = "unsloth/Qwen3.5-2B"
+QWEN = "unsloth/Qwen3.5-0.8B-GGUF"
 
 
 def main() -> int:

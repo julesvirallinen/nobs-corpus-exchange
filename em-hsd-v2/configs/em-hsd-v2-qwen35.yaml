@@ -1,4 +1,4 @@
-# Qwen3.5-2B via transformers on CPU (Unsloth kernels need CUDA 7.0+)
+# Qwen3.5-0.8B-GGUF via transformers on CPU (Unsloth kernels need CUDA 7.0+)
 # Use: CUDA_VISIBLE_DEVICES="" python scripts/test_qwen.py --config configs/em-hsd-v2-qwen35.yaml
 
 mlm:
@@ -56,7 +56,7 @@ em_hsd_v2:
 
 generation:
   backend: transformers
-  model: unsloth/Qwen3.5-2B
+  model: unsloth/Qwen3.5-0.8B-GGUF
   load_in_4bit: false
   max_new_tokens: 96
 
