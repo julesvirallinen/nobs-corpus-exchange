@@ -28,6 +28,43 @@ PYTHONPATH=src python scripts/smoke_eval.py \
   --config configs/em-hsd-v2-test.yaml
 ```
 
+## Pipeline package (Layers 1–4)
+
+The `triage_dp` package is the single structural home for the full pipeline:
+one folder, one named subfolder per layer, each with a `define` module (the
+layer's interface contract) and a default implementation. `pipeline.py` is the
+entry point that connects the layers.
+
+```
+src/triage_dp/
+  pipeline.py              # entry point: TriageDpPipeline composes Layers 1→4
+  layer1_triage/           # Layer 1 — cross-saliency token triage
+    define.py              #   interface (TriageRouter, TokenRoute)
+    default.py             #   default impl (no-op router)
+  layer2_stylometric/      # Layer 2 — Biber-style stylometric priors
+    define.py / default.py
+  layer3_calibration/      # Layer 3 — trade-off (theta) calibration
+    define.py / default.py
+  layer4_rewrite/          # Layer 4 — sentence-level rewrite (EM-HSD v2)
+    define.py              #   interface (RewriteLayer)
+    rewrite.py             #   impl wrapping em_hsd's Layer4Orchestrator
+```
+
+The layer-1–3 defaults are no-ops, so the out-of-the-box pipeline reproduces
+standalone Layer 4 behaviour; swap in real implementations via the entry point:
+
+```python
+from triage_dp import TriageDpPipeline
+
+pipe = TriageDpPipeline.from_config("configs/em-hsd-v2-test.yaml")
+selected, audit = pipe.sanitize("you are a complete dummy")
+# or: TriageDpPipeline(cfg, triage=MyRouter(), calibration=MyOptimizer())
+```
+
+Layer 4 (`rewrite`) currently wraps the existing `em_hsd` Layer-4 code; the
+`triage_dp` package consolidates the pipeline so it can be packaged on its own
+later. Run `scripts/pipeline_demo.py` for a one-shot demo of the entry point.
+
 ## Demo server + frontend
 
 Package the pipeline behind an HTTP API and a single-page demo client so a
@@ -142,6 +179,7 @@ When integrated, real Layer 1 (triage), Layer 2 (stylometric prior), and Layer 3
 | Script | Purpose |
 |--------|---------|
 | `scripts/serve.py` | Launch the demo API server + frontend (FastAPI/uvicorn) |
+| `scripts/pipeline_demo.py` | One-shot demo of the `triage_dp` pipeline entry point (Layers 1–4) |
 | `scripts/demo.py` | One-off sanitisation with optional JSON output |
 | `scripts/smoke_eval.py` | Evaluate a CSV of synthetic inputs |
 | `scripts/run_ablations.py` | Run ablation experiments A1–A9 |
