@@ -29,6 +29,9 @@ class EmHsdV2Settings:
     delta_u: float = 0.5
     min_length_tokens: int = 3
     max_length_tokens: int = 0
+    # Privacy-aware selection: reward surface divergence (edit ratio) from the
+    # original among faithful candidates, lowering authorship re-identification.
+    privacy_weight: float = 0.0
 
     @property
     def epsilon_1(self) -> float:
@@ -111,6 +114,7 @@ def _parse_em_settings(d: dict) -> EmHsdV2Settings:
         clip=float(em.get("clip", 5.0)),
         use_refined_delta_u=bool(em.get("use_refined_delta_u", True)),
         utility_alpha=float(em.get("utility_alpha", 1.0)),
+        privacy_weight=float(em.get("privacy_weight", 0.0)),
     )
 
 

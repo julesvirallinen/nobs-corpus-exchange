@@ -122,7 +122,9 @@ def filter_candidates(
             continue
 
         batch.valid.append(cand)
-        batch.scores.append(sem_cos - em.delta_u * p_hate)
+        # Reward faithful (high sem_cos), low-hate candidates, and — for privacy —
+        # those that diverge more in surface form (edit_ratio) from the original.
+        batch.scores.append(sem_cos - em.delta_u * p_hate + em.privacy_weight * edit_ratio)
         batch.details.append(FilterResult(cand, True, "", p_hate, sem_cos))
 
     return batch
