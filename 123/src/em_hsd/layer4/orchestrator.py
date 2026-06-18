@@ -28,26 +28,6 @@ class Layer4Orchestrator:
             self._resources_config_id = id(config)
         return self._resources
 
-    @staticmethod
-    def _apply_layer1_routes(
-        text: str,
-        config: EmHsdConfig,
-        routes: list[TokenRoute] | None,
-    ) -> tuple[str, list[str], list[dict]]:
-        """Run token sanitize with optional protected overrides from Layer 1.
-
-        Q1 and Q3 routes set protected_override; Q2 uses configured ε₁.
-        """
-        epsilon_1 = config.em_hsd_v2.epsilon_1
-        protected_override: set[str] = set()
-        token_log: list[dict] = []
-        if routes:
-            for route in routes:
-                if route.quadrant in ("Q1", "Q3") or route.protected_override:
-                    protected_override.add(route.token)
-        x_priv, token_log = token_sanitize(text, config, epsilon_1)
-        return x_priv, sorted(protected_override), token_log
-
     def privatize(
         self,
         text: str,
@@ -79,11 +59,30 @@ class Layer4Orchestrator:
         epsilon_2 = em.epsilon_2
         delta_u = selection_sensitivity(text, em.use_refined_delta_u)
 
-        x_priv, token_log = token_sanitize(text, config, epsilon_1)
+        # The pipeline merges Layer 1 + Layer 2 routes into one list (passed as
+        # layer1_routes); honour both signals from the union. Layer 1: tokens
+        # marked Q1/Q3 are kept verbatim. Layer 2: stylometric identity carriers
+        # (action=sanitize / biber_boost) are force-sanitised.
+        all_routes = list(layer1_routes or []) + list(layer2_routes or [])
+        protected_tokens = {
+            r.token
+            for r in all_routes
+            if r.quadrant in ("Q1", "Q3") or r.protected_override
+        }
+        force_sanitize = {
+            r.token
+            for r in all_routes
+            if (r.action == "sanitize" or r.biber_boost > 0)
+            and r.token not in protected_tokens
+        }
+        x_priv, token_log = token_sanitize(
+            text,
+            config,
+            epsilon_1,
+            protected_tokens=protected_tokens or None,
+            force_sanitize=force_sanitize or None,
+        )
         canonicals, skels = protected_canonicals(text, config)
-
-        if layer2_routes is not None:
-            pass  # Layer 2 priors are applied upstream; no action in Layer 4
 
         audit: dict[str, Any] = {
             "mode": "em-hsd-v2",
@@ -94,6 +93,8 @@ class Layer4Orchestrator:
             "delta_u_naive": 1.0,
             "x_priv": x_priv,
             "protected_terms": canonicals,
+            "layer1_protected": sorted(protected_tokens),
+            "layer2_boosted": sorted(force_sanitize),
             "token_log": token_log,
             "fallback": False,
             "fallback_reason": "",

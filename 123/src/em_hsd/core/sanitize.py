@@ -25,8 +25,28 @@ def _log_entry(seg) -> dict:
     }
 
 
-def token_sanitize(text: str, config: EmHsdConfig, epsilon_1: float) -> tuple[str, list[dict]]:
-    """Run normalize → protect → ε₁ DP on content tokens only."""
+def _alnum_key(s: str) -> str:
+    """Lowercased alphanumeric key for matching layer token surfaces to segments."""
+    return "".join(c.lower() for c in (s or "") if c.isalnum())
+
+
+def token_sanitize(
+    text: str,
+    config: EmHsdConfig,
+    epsilon_1: float,
+    *,
+    protected_tokens: set[str] | None = None,
+    force_sanitize: set[str] | None = None,
+) -> tuple[str, list[dict]]:
+    """Run normalize → protect → ε₁ DP on content tokens only.
+
+    *protected_tokens* (Layer 1 cross-saliency Q1/Q3) are kept verbatim even if
+    they classify as content. *force_sanitize* (Layer 2 stylometric identity
+    carriers) are ε₁-rewritten even if they classify as function words. Both are
+    matched on an alphanumeric key so trailing punctuation does not matter.
+    """
+    protected_keys = {_alnum_key(t) for t in (protected_tokens or ()) if _alnum_key(t)}
+    force_keys = {_alnum_key(t) for t in (force_sanitize or ()) if _alnum_key(t)}
     spine = config.spine
     if spine.rng is None:
         raise ValueError("config.spine.rng must be set before token_sanitize")
@@ -62,7 +82,19 @@ def token_sanitize(text: str, config: EmHsdConfig, epsilon_1: float) -> tuple[st
 
         token_class = classify_segment(seg)
         seg.token_class = token_class
-        if token_class != "content" or epsilon_1 <= 0:
+
+        key = _alnum_key(seg.text)
+        # Layer 1: protect salient hate tokens verbatim, even if content.
+        if key and key in protected_keys:
+            seg.replacement = seg.text
+            seg.epsilon = None
+            seg.action = "kept"
+            seg.reason = "Layer 1 cross-saliency: protected in place"
+            continue
+        # Layer 2: force-rewrite stylometric identity carriers (e.g. 2nd-person
+        # pronouns, place/time adverbials) that would otherwise be kept.
+        forced = bool(key) and key in force_keys and epsilon_1 > 0
+        if (token_class != "content" and not forced) or epsilon_1 <= 0:
             seg.replacement = seg.text
             seg.epsilon = None
             if seg.normalized != seg.original:
