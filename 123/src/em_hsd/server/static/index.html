@@ -387,9 +387,8 @@ function dismissRows(ids){ ids.forEach(id=>{const r=S.rows.find(x=>x.id===id); i
 //// ---------------------------------------------------------------- render
 function renderPostIt(){
   const el=$("postit");
-  const items = S.rows.length
-    ? S.rows.map(r=>`<li>${esc(r.original)}</li>`).join("")
-    : `<li style="color:#a08020;font-style:italic;">process a corpus to see originals here</li>`;
+  if(!S.rows.length){ el.innerHTML=""; return; }
+  const items = S.rows.map(r=>`<li>${esc(r.original)}</li>`).join("");
   el.innerHTML=`<div class="postit"><div class="postit-title">original sentences</div><ol>${items}</ol></div>`;
 }
 
