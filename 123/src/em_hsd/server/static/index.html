@@ -298,10 +298,16 @@ function loadFile(name, text){
 }
 
 //// ---------------------------------------------------------------- processing
+// Real Qwen generation runs ~0.3-0.4 rows/s on CPU, so process a small sample
+// in the interactive demo rather than the whole upload (which would block for
+// many minutes). Raise/remove for batch runs via the CLI.
+const CLIENT_SAMPLE_CAP = 15;
 async function runProcessing(){
   if(!S.file) return;
   S.proc="running"; S.step="upload"; render();
-  const rows = S.file.records.map(r=>String(r[S.file.column]??"")).filter(t=>t.trim().length);
+  const allRows = S.file.records.map(r=>String(r[S.file.column]??"")).filter(t=>t.trim().length);
+  const rows = allRows.slice(0, CLIENT_SAMPLE_CAP);
+  const capped = allRows.length > rows.length;
   try{
     const resp = await fetch("/api/process",{
       method:"POST", headers:{"Content-Type":"application/json"},
@@ -314,7 +320,7 @@ async function runProcessing(){
     S.rows = data.rows.map(r=>({...r, cat:r.category||null, modelCat:r.category||null, reclassified:false, validated:false, dismissed:false}));
     S.proc="done"; S.step="overview";
     const via = data.classifier==="hf" ? "unbiased-toxic-roberta" : "lexicon proxy";
-    toast(`Processed ${fmt(data.count)} messages · ${fmt(data.flagged)} flagged · labelled by ${via}`);
+    toast(`Processed ${fmt(data.count)} messages${capped?` (sample of ${fmt(allRows.length)})`:""} · ${fmt(data.flagged)} flagged · labelled by ${via}`);
   }catch(e){
     S.proc="idle";
     toast("Processing failed: "+e.message);

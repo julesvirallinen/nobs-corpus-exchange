@@ -56,8 +56,8 @@ utility:
 em_hsd_v2:
   epsilon_total: 18.0
   epsilon_split: 0.5
-  k_generate: 4
-  k_max_after_prune: 4
+  k_generate: 2          # fewer Qwen candidates -> ~2x faster interactive demo
+  k_max_after_prune: 2
   tau_dup: 0.80
   generation_temperature: 0.8
   hate_floor_delta: 0.15
