@@ -28,6 +28,43 @@ PYTHONPATH=src python scripts/smoke_eval.py \
   --config configs/em-hsd-v2-test.yaml
 ```
 
+## Demo server + frontend
+
+Package the pipeline behind an HTTP API and a single-page demo client so a
+frontend can call it:
+
+```bash
+# Install the server extra (FastAPI + uvicorn)
+pip install -e ".[serve]"
+
+# Launch (recommended entry point — sets up the SPINE path automatically)
+PYTHONPATH=src python scripts/serve.py --port 8000
+
+# Or, once installed, the console script:
+em-hsd-serve --port 8000
+```
+
+Then open <http://127.0.0.1:8000/> for the demo UI, or call the API directly:
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/privatize \
+  -H 'Content-Type: application/json' \
+  -d '{"text": "you are a complete dummy", "config": "em-hsd-v2-test.yaml"}'
+```
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/` | GET | Static demo frontend |
+| `/health` | GET | Liveness + default config |
+| `/api/configs` | GET | List selectable config files |
+| `/api/privatize` | POST | Privatise one string → `{selected, x_priv, candidates, audit, …}` |
+
+The default config (`em-hsd-v2-test.yaml`) uses mock generation and the proxy
+utility scorer, so the server starts instantly and needs no model downloads.
+Pass a different `config` (e.g. one of the Qwen configs) to use real models —
+see the no-download policy below. Models are loaded once and kept warm across
+requests; CORS is open so any frontend origin can call the API.
+
 ## What this repo does
 
 1. **Tokenises** the input and tags protected/hate-lexicon tokens.
@@ -104,6 +141,7 @@ When integrated, real Layer 1 (triage), Layer 2 (stylometric prior), and Layer 3
 
 | Script | Purpose |
 |--------|---------|
+| `scripts/serve.py` | Launch the demo API server + frontend (FastAPI/uvicorn) |
 | `scripts/demo.py` | One-off sanitisation with optional JSON output |
 | `scripts/smoke_eval.py` | Evaluate a CSV of synthetic inputs |
 | `scripts/run_ablations.py` | Run ablation experiments A1–A9 |
