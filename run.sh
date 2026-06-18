@@ -56,4 +56,5 @@ elif command -v xdg-open &>/dev/null; then
 fi
 
 export EM_HSD_SPINE_PATH="$SPINE_DIR"
+export EM_HSD_ALLOW_DOWNLOADS=1
 exec "$VENV/bin/em-hsd-serve" --host "$HOST" --port "$PORT"
