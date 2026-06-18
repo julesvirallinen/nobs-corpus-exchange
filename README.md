@@ -1,7 +1,7 @@
 # NoBS · Corpus Exchange
 
 
-clickable demo: https//136.114.94.183:8000 (pre-calculated LLM processing, live demo will be with real processing) 
+clickable demo: https://136.114.94.183:8000 (pre-calculated LLM processing, live demo will be with real processing) 
 
 
 
