@@ -10,6 +10,8 @@ Endpoints:
     GET  /health          – liveness + loaded backend info
     GET  /api/configs     – list selectable config files
     POST /api/privatize   – privatise one text string, return audit
+    POST /api/process     – batch: run many rows through the pipeline for the
+                            Corpus Exchange upload → review flow
 """
 
 from __future__ import annotations
@@ -79,6 +81,113 @@ class PrivatizeResponse(BaseModel):
     generation_backend: str | None = None
     candidates: list[Candidate]
     audit: dict[str, Any]
+
+
+# --- Batch processing (Corpus Exchange "Process & validate" flow) -----------
+
+# Demo guardrail: cap rows per request so a large upload can't wedge the
+# single-threaded, lock-serialised orchestrator. The UI uploads a sample.
+MAX_BATCH_ROWS = 5000
+# Decision boundary for the proxy hate score: at/above this a row is flagged.
+HATE_THRESHOLD = 0.5
+
+
+class ProcessRequest(BaseModel):
+    rows: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=MAX_BATCH_ROWS,
+        description="Extracted text-column values to privatise & audit, in order.",
+    )
+    config: str | None = Field(
+        default=None,
+        description=f"Config file name from /api/configs. Defaults to {DEFAULT_CONFIG}.",
+    )
+    privatization_level: int = Field(
+        default=1,
+        ge=0,
+        le=3,
+        description="0 Light · 1 Standard · 2 High · 3 Maximum. Varies the DP seed.",
+    )
+    run_seed: str = Field(default="corpus", description="Run-level seed label.")
+
+
+class ProcessedRow(BaseModel):
+    id: int
+    original: str
+    x_priv: str
+    p_hate_original: float | None
+    p_hate_x_priv: float | None
+    flagged: bool
+    confidence: float
+    confidence_band: str
+    severity: str
+    tokens_changed: int
+    epsilon_total: float | None
+    fallback: bool
+
+
+class ProcessResponse(BaseModel):
+    config: str
+    privatization_level: int
+    count: int
+    flagged: int
+    flagged_pct: float
+    low_confidence: int
+    clusters: int
+    severity_hist: dict[str, int]
+    status_hist: dict[str, int]
+    rows: list[ProcessedRow]
+
+
+def _tokens_changed(original: str, x_priv: str) -> int:
+    """Word-level edit count between the original and its anonymised rewrite."""
+    a = original.split()
+    b = x_priv.split()
+    diff = sum(1 for i in range(min(len(a), len(b))) if a[i] != b[i])
+    return diff + abs(len(a) - len(b))
+
+
+def _derive_row(idx: int, original: str, audit: dict[str, Any]) -> ProcessedRow:
+    """Turn one pipeline audit into the record the review table filters on."""
+    p_hate = audit.get("P_hate_original")
+    p = float(p_hate) if p_hate is not None else 0.0
+    flagged = p >= HATE_THRESHOLD
+    # Confidence = the model's probability for the class it predicted (0.5..1).
+    # Rows near 0.5 are the labels most likely wrong — surfaced as low.
+    confidence = round(max(p, 1.0 - p), 3)
+    if confidence >= 0.85:
+        band = "high"
+    elif confidence >= 0.70:
+        band = "medium"
+    else:
+        band = "low"
+    x_priv = str(audit.get("x_priv", ""))
+    changed = _tokens_changed(original, x_priv)
+    # Severity is a direct banding of the model's hate probability — display
+    # mapping only, no scoring logic of our own. To be refined later.
+    if not flagged:
+        severity = "none"
+    elif p >= 0.8:
+        severity = "high"
+    elif p >= 0.65:
+        severity = "medium"
+    else:
+        severity = "low"
+    return ProcessedRow(
+        id=idx,
+        original=original,
+        x_priv=x_priv,
+        p_hate_original=p_hate,
+        p_hate_x_priv=audit.get("P_hate_x_priv"),
+        flagged=flagged,
+        confidence=confidence,
+        confidence_band=band,
+        severity=severity,
+        tokens_changed=changed,
+        epsilon_total=audit.get("epsilon_total"),
+        fallback=bool(audit.get("fallback", False)),
+    )
 
 
 def list_configs() -> list[str]:
@@ -183,6 +292,49 @@ def create_app() -> FastAPI:
                 for c in audit.get("candidates", [])
             ],
             audit=audit,
+        )
+
+    @app.post("/api/process", response_model=ProcessResponse)
+    def process(req: ProcessRequest) -> ProcessResponse:
+        config_path = _resolve_config_name(req.config)
+        # Privatisation level varies the run-level seed so different levels
+        # produce different anonymisations from the same input.
+        run_seed = f"{req.run_seed}-L{req.privatization_level}"
+
+        records: list[ProcessedRow] = []
+        for idx, text in enumerate(req.rows):
+            stripped = text.strip()
+            if not stripped:
+                records.append(_derive_row(idx, text, {"x_priv": "", "P_hate_original": 0.0}))
+                continue
+            try:
+                _, audit = _privatize(stripped, str(config_path), idx, run_seed)
+            except Exception as exc:  # surface pipeline errors as 500 with detail
+                raise HTTPException(
+                    status_code=500, detail=f"pipeline error on row {idx}: {exc}"
+                ) from exc
+            records.append(_derive_row(idx, text, audit))
+
+        flagged = [r for r in records if r.flagged]
+        severity_hist = {
+            "high": sum(1 for r in flagged if r.severity == "high"),
+            "medium": sum(1 for r in flagged if r.severity == "medium"),
+            "low": sum(1 for r in flagged if r.severity == "low"),
+        }
+        # Light grouping: distinct anonymised text among flagged rows.
+        clusters = len({r.x_priv for r in flagged})
+        count = len(records)
+        return ProcessResponse(
+            config=config_path.name,
+            privatization_level=req.privatization_level,
+            count=count,
+            flagged=len(flagged),
+            flagged_pct=round(100.0 * len(flagged) / count, 1) if count else 0.0,
+            low_confidence=sum(1 for r in records if r.confidence_band == "low"),
+            clusters=clusters,
+            severity_hist=severity_hist,
+            status_hist={"flagged": len(flagged), "clean": count - len(flagged)},
+            rows=records,
         )
 
     if _STATIC_DIR.is_dir():

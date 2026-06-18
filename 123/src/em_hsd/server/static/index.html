@@ -1,186 +1,754 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EM-HSD v2 — DP Text Sanitisation Demo</title>
-  <style>
-    :root {
-      --bg: #0f1117; --panel: #181b23; --panel2: #1f232d; --border: #2a2f3a;
-      --text: #e6e8ee; --muted: #9aa3b2; --accent: #6ea8fe; --good: #4ade80;
-      --warn: #fbbf24; --bad: #f87171; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; background: var(--bg); color: var(--text);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      line-height: 1.5;
-    }
-    .wrap { max-width: 880px; margin: 0 auto; padding: 32px 20px 80px; }
-    h1 { font-size: 1.5rem; margin: 0 0 4px; }
-    .sub { color: var(--muted); margin: 0 0 24px; font-size: 0.92rem; }
-    label { display: block; font-size: 0.82rem; color: var(--muted); margin: 0 0 6px; }
-    textarea, select, input {
-      width: 100%; background: var(--panel2); color: var(--text);
-      border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
-      font-size: 0.95rem; font-family: inherit;
-    }
-    textarea { resize: vertical; min-height: 80px; }
-    .row { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
-    .row > div { flex: 1; min-width: 140px; }
-    button {
-      margin-top: 16px; background: var(--accent); color: #0b1020; border: none;
-      border-radius: 8px; padding: 11px 20px; font-size: 0.95rem; font-weight: 600;
-      cursor: pointer;
-    }
-    button:disabled { opacity: 0.5; cursor: default; }
-    .card {
-      background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-      padding: 18px 20px; margin-top: 22px;
-    }
-    .field { margin-bottom: 14px; }
-    .field:last-child { margin-bottom: 0; }
-    .field .k { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-    .field .v { font-size: 1.02rem; margin-top: 2px; }
-    .v.mono { font-family: var(--mono); font-size: 0.92rem; }
-    .selected { color: var(--good); font-weight: 600; }
-    .pill {
-      display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem;
-      font-weight: 600;
-    }
-    .pill.ok { background: rgba(74,222,128,0.15); color: var(--good); }
-    .pill.fb { background: rgba(251,191,36,0.15); color: var(--warn); }
-    .stats { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 4px; }
-    .stat .n { font-size: 1.15rem; font-weight: 700; }
-    .stat .l { font-size: 0.74rem; color: var(--muted); }
-    .cand { padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; margin-top: 8px; font-family: var(--mono); font-size: 0.88rem; }
-    .cand.sel { border-color: var(--good); background: rgba(74,222,128,0.06); }
-    .cand .score { color: var(--muted); float: right; }
-    details { margin-top: 18px; }
-    summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; }
-    pre { background: #0b0d12; border: 1px solid var(--border); border-radius: 8px; padding: 14px; overflow: auto; font-size: 0.8rem; max-height: 360px; }
-    .err { color: var(--bad); }
-    .hint { color: var(--muted); font-size: 0.78rem; margin-top: 6px; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NoBS Observatory · Corpus Exchange v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#3b5bdb; --accent-soft:#eef1fc; --accent-border:#c7d0f5;
+    --ink:#1a1d29; --ink2:#3a4150; --muted:#6b7180; --faint:#9aa0ae;
+    --line:#e7e9ef; --line2:#e3e5ed; --surface:#fbfbfd; --panel:#fff;
+    --dark:#12141c; --good:#2f7d57; --good-bg:#e8f3ec; --good-border:#bfe0cc;
+    --warn:#946f00; --warn-bg:#fdf6ea; --warn-border:#ecd9a8;
+    --mono:'Spline Sans Mono',ui-monospace,Menlo,monospace;
+    --sev-high:#e8590c; --sev-med:#f08c00; --sev-low:#868e96;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{background:var(--surface);font-family:'Public Sans',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;font-size:14px;}
+  button{font-family:inherit;}
+  ::selection{background:rgba(59,91,219,.22);}
+  .mono{font-family:var(--mono);}
+  .scroll::-webkit-scrollbar{width:10px;height:10px;}
+  .scroll::-webkit-scrollbar-thumb{background:#d4d7e0;border-radius:6px;}
+  .scroll::-webkit-scrollbar-track{background:transparent;}
+  @keyframes toastIn{0%{opacity:0;transform:translate(-50%,8px);}12%{opacity:1;transform:translate(-50%,0);}88%{opacity:1;transform:translate(-50%,0);}100%{opacity:0;transform:translate(-50%,8px);}}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .app{display:flex;height:100vh;width:100vw;overflow:hidden;}
+  /* rail */
+  .rail{width:54px;flex:none;background:var(--dark);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px;}
+  .rail .logo{width:28px;height:28px;border-radius:7px;background:var(--accent);margin-bottom:10px;}
+  .rail button{width:34px;height:34px;border-radius:8px;border:none;background:transparent;color:#7d8499;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;}
+  .rail button:hover{background:#1e2230;color:#cdd2df;}
+  .rail button.on{background:#262b3b;color:#fff;}
+  .rail .me{margin-top:auto;width:28px;height:28px;border-radius:99px;background:#e7eafb;color:var(--accent);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  /* main */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 20px;border-bottom:1px solid var(--line);background:var(--panel);flex:none;}
+  .brand{font-size:15px;font-weight:800;letter-spacing:-.3px;color:var(--dark);}
+  .pill{font-family:var(--mono);font-size:10px;letter-spacing:.6px;color:var(--faint);border:1px solid var(--line2);border-radius:5px;padding:2px 7px;}
+  .kbd{font-family:var(--mono);font-size:10.5px;background:#f1f2f6;border:1px solid var(--line2);border-radius:4px;padding:1px 6px;}
+  .tag-green{font-size:10.5px;font-family:var(--mono);color:var(--good);background:var(--good-bg);border-radius:99px;padding:3px 9px;}
+  .tabnav{display:flex;gap:2px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel);flex:none;}
+  .tab{position:relative;background:transparent;border:none;padding:13px 14px 14px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;}
+  .tab:hover{color:var(--ink2);}
+  .tab.on{color:var(--ink);}
+  .tab.on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2.5px;border-radius:3px;background:var(--accent);}
+  .surface{flex:1;min-height:0;overflow:auto;}
+
+  .wrap{margin:0 auto;padding:28px 24px 64px;}
+  h2.title{font-size:22px;font-weight:800;letter-spacing:-.4px;margin:0 0 4px;}
+  p.lede{margin:0 0 22px;font-size:14px;color:var(--muted);}
+  .card{border:1px solid var(--line2);border-radius:11px;background:var(--panel);}
+  .stat{flex:1;border:1px solid var(--line2);border-radius:11px;background:var(--panel);padding:15px 17px;}
+  .stat .k{font-size:11.5px;color:var(--faint);font-weight:600;letter-spacing:.2px;}
+  .stat .v{font-size:25px;font-weight:800;letter-spacing:-.5px;margin-top:3px;}
+  .label{font-family:var(--mono);font-size:10.5px;letter-spacing:.5px;color:var(--faint);}
+  .btn{font-size:13px;font-weight:700;color:#fff;background:var(--accent);border:none;border-radius:8px;padding:10px 18px;cursor:pointer;}
+  .btn:disabled{opacity:.5;cursor:default;}
+  .btn-ghost{font-size:12px;font-weight:600;color:var(--accent);background:var(--panel);border:1px solid var(--accent-border);border-radius:6px;padding:6px 13px;cursor:pointer;}
+  .btn-soft{font-size:12px;font-weight:600;color:var(--ink2);background:var(--panel);border:1px solid var(--line2);border-radius:6px;padding:6px 13px;cursor:pointer;}
+
+  /* flow subnav */
+  .subnav{display:flex;align-items:center;gap:18px;padding:10px 22px;border-bottom:1px solid var(--line);background:#fcfcfd;position:sticky;top:0;z-index:5;}
+  .step{font-size:12.5px;font-weight:600;color:var(--muted);background:transparent;border:none;border-radius:7px;padding:6px 11px;cursor:pointer;}
+  .step:hover{background:#f1f2f6;color:var(--ink2);}
+  .step.on{background:var(--accent-soft);color:var(--accent);}
+  .step.done{color:var(--good);}
+
+  /* upload */
+  .drop{border:1.5px dashed #c4cadb;border-radius:13px;background:#fff;padding:34px 24px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;}
+  .drop:hover,.drop.hot{border-color:var(--accent);background:#f7f9ff;}
+  .field{flex:1;border:1px solid var(--line2);border-radius:9px;padding:9px 11px;background:#fff;}
+  .field .l{font-size:11px;color:var(--faint);}
+  .field select,.field input{border:none;outline:none;background:transparent;font-size:13.5px;font-weight:600;color:var(--ink);width:100%;margin-top:2px;font-family:inherit;}
+  input[type=range]{width:100%;accent-color:var(--accent);}
+  .proc-step{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f4f5f8;}
+  .dot{width:18px;height:18px;border-radius:99px;flex:none;display:flex;align-items:center;justify-content:center;font-size:11px;}
+  .dot.todo{background:#eef0f4;color:#b5bac6;}
+  .dot.run{background:var(--accent-soft);color:var(--accent);}
+  .dot.ok{background:var(--good-bg);color:var(--good);}
+
+  /* review */
+  .facets{width:230px;flex:none;border-right:1px solid var(--line);background:#fafbfc;padding:16px 15px;overflow:auto;}
+  .facet-h{display:flex;align-items:center;justify-content:space-between;margin:18px 0 11px;}
+  .chk{width:15px;height:15px;border-radius:4px;border:1.5px solid #cdd2de;background:#fff;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff;cursor:pointer;}
+  .chk.on{background:var(--accent);border-color:var(--accent);}
+  .facet-row{display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;padding:3px 0;color:var(--ink2);}
+  .cdot{width:8px;height:8px;border-radius:99px;flex:none;}
+  .preset{font-size:11.5px;font-weight:600;color:var(--muted);background:#fff;border:1px solid var(--line2);border-radius:7px;padding:6px 9px;cursor:pointer;}
+  .preset.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent-border);}
+
+  table{width:100%;border-collapse:collapse;}
+  .rowline{border-bottom:1px solid #f1f2f6;}
+  .rowline:hover{background:#fafbff;}
+  .rowline.sel{background:var(--accent-soft);}
+  .sevbadge{font-size:10.5px;font-weight:700;border-radius:99px;padding:2px 9px;text-transform:capitalize;}
+  .catbadge{font-size:11.5px;display:inline-flex;align-items:center;gap:7px;}
+  .iconbtn{width:26px;height:26px;border-radius:6px;border:1px solid var(--line2);background:#fff;color:var(--muted);cursor:pointer;font-size:12px;}
+  .iconbtn:hover{border-color:var(--accent-border);color:var(--accent);background:var(--accent-soft);}
+  .footerbar{display:flex;align-items:center;gap:16px;padding:10px 18px;background:var(--dark);color:#aeb3c2;font-family:var(--mono);font-size:11px;flex:none;}
+  .footerbar b{color:#fff;background:#262936;border-radius:3px;padding:1px 6px;}
+  .detail{background:#f7f8fc;border-top:1px dashed #d8dce8;padding:14px 18px 16px 56px;font-size:12.5px;color:var(--ink2);}
+
+  /* modal + toast */
+  .modal-bg{position:fixed;inset:0;background:rgba(18,20,28,.4);display:flex;align-items:center;justify-content:center;z-index:40;}
+  .modal{width:400px;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(10,15,40,.3);overflow:hidden;}
+  .opt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font-size:13px;font-weight:600;color:var(--ink2);background:#fff;border:none;border-radius:8px;padding:10px 12px;cursor:pointer;}
+  .opt:hover{background:#f4f5f8;}
+  .toast{position:fixed;bottom:24px;left:50%;background:var(--dark);color:#fff;font-size:13px;font-weight:600;border-radius:10px;padding:12px 20px;box-shadow:0 10px 30px rgba(10,15,40,.35);z-index:50;animation:toastIn 2.8s ease forwards;display:flex;align-items:center;gap:10px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .spinner{width:13px;height:13px;border:2px solid var(--accent-border);border-top-color:var(--accent);border-radius:99px;animation:spin .7s linear infinite;display:inline-block;}
+  .mock-banner{display:flex;align-items:center;gap:10px;background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:10px;padding:10px 14px;font-size:12.5px;color:var(--warn);margin-bottom:18px;}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>EM-HSD v2 — DP Text Sanitisation</h1>
-    <p class="sub">Differential-privacy paraphrasing of hate-adjacent text. Enter a sentence; the pipeline sanitises tokens, generates candidate paraphrases, and selects one under the exponential mechanism.</p>
-
-    <div class="card">
-      <label for="text">Input text</label>
-      <textarea id="text" placeholder="you are a complete dummy">you are a complete dummy</textarea>
-      <div class="row">
-        <div>
-          <label for="config">Config</label>
-          <select id="config"></select>
-        </div>
-        <div>
-          <label for="seed">Seed</label>
-          <input id="seed" type="number" value="0" />
-        </div>
-      </div>
-      <button id="go">Privatise</button>
-      <div class="hint" id="backend-hint"></div>
-    </div>
-
-    <div id="out"></div>
+<div class="app">
+  <!-- ICON RAIL -->
+  <div class="rail">
+    <span class="logo"></span>
+    <button data-tab="library" title="Corpus library">▦</button>
+    <button data-tab="trends" title="Trends explorer">📈</button>
+    <button data-tab="country" title="Country deep-dive">◵</button>
+    <button data-tab="access" title="Access &amp; sharing">⊕</button>
+    <button data-tab="flow" title="Process &amp; validate">✓</button>
+    <span class="me">RN</span>
   </div>
 
-  <script>
-    const $ = (id) => document.getElementById(id);
-    const API = ""; // same origin
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="brand">NoBS Observatory</span>
+        <span class="pill">CORPUS EXCHANGE · v2</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px;">
+        <span style="display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);border:1px solid var(--line2);border-radius:7px;padding:6px 11px;background:#fff;">Command <span class="kbd">⌘K</span></span>
+        <span style="font-size:12.5px;font-weight:600;color:var(--ink2);">Renaissance Numérique</span>
+        <span class="tag-green">HSD client</span>
+      </div>
+    </div>
 
-    async function loadConfigs() {
-      try {
-        const r = await fetch(API + "/api/configs");
-        const data = await r.json();
-        const sel = $("config");
-        sel.innerHTML = "";
-        for (const c of data.configs) {
-          const opt = document.createElement("option");
-          opt.value = c; opt.textContent = c;
-          if (c === data.default) opt.selected = true;
-          sel.appendChild(opt);
-        }
-        $("backend-hint").textContent =
-          "Default config uses mock generation + proxy scorer (no model downloads).";
-      } catch (e) {
-        $("backend-hint").innerHTML =
-          '<span class="err">Could not reach API. Is the server running?</span>';
-      }
+    <div class="tabnav" id="tabnav"></div>
+    <div class="surface scroll" id="surface"></div>
+  </div>
+</div>
+
+<div id="overlay"></div>
+
+<input type="file" id="filepick" accept=".csv,.jsonl,.txt" style="display:none" />
+
+<script>
+//// ---------------------------------------------------------------- state
+const TABS = [
+  ["library","Corpus library"],["trends","Trends explorer"],
+  ["country","Country deep-dive"],["access","Access & sharing"],
+  ["flow","▸ Process & validate"],
+];
+const STEPS = [["upload","1 · Upload"],["overview","2 · Overview"],["review","3 · Review & reclassify"],["publish","4 · Publish"]];
+const PRIV = [
+  {name:"Light",     util:"96%", risk:"High",    riskColor:"#e8590c"},
+  {name:"Standard",  util:"88%", risk:"Medium",  riskColor:"#f08c00"},
+  {name:"High",      util:"74%", risk:"Low",     riskColor:"#2f7d57"},
+  {name:"Maximum",   util:"61%", risk:"Minimal", riskColor:"#2f7d57"},
+];
+// Categories the human reviewer assigns during validation. The model flags &
+// scores; the analyst attributes the target group. Reclassifying records a
+// correction that (in production) feeds retraining.
+const CATS = [
+  {id:"religion", label:"Religion",              color:"#6741d9"},
+  {id:"ethnicity",label:"Ethnicity / nationality",color:"#1971c2"},
+  {id:"gender",   label:"Gender",                color:"#c2255c"},
+  {id:"orientation",label:"Sexual orientation",  color:"#e8590c"},
+  {id:"political", label:"Political",             color:"#2f9e44"},
+  {id:"other",    label:"Other / unsure",        color:"#868e96"},
+];
+const CAT_MAP = Object.fromEntries(CATS.map(c=>[c.id,c]));
+const SEVS = {high:"#e8590c", medium:"#f08c00", low:"#868e96"};
+
+const S = {
+  tab:"flow", step:"upload",
+  file:null,            // {name, headers, records(array of obj), column, count}
+  privLevel:1,
+  proc:"idle",          // idle | running | done
+  result:null,          // ProcessResponse
+  rows:[],              // processed rows + local review state
+  filters:{cats:new Set(), sevs:new Set(), conf:"all", status:"flagged"},
+  sort:"confidence",    // confidence | severity | phate
+  sel:new Set(),
+  expanded:null,
+  picker:null,          // {mode, ids}
+  toast:null,
+};
+
+const $ = (id)=>document.getElementById(id);
+const esc = (s)=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+const fmt = (n)=>Number(n).toLocaleString("en-US");
+
+//// ---------------------------------------------------------------- CSV / file parse
+function parseCSV(text){
+  const rows=[]; let row=[],cur="",q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; }
+      else cur+=c;
+    } else {
+      if(c==='"') q=true;
+      else if(c===','){ row.push(cur);cur=""; }
+      else if(c==='\n'){ row.push(cur);rows.push(row);row=[];cur=""; }
+      else if(c==='\r'){}
+      else cur+=c;
     }
+  }
+  if(cur.length||row.length){ row.push(cur);rows.push(row); }
+  return rows.filter(r=>r.length>1||(r.length===1&&r[0]!==""));
+}
+function loadFile(name, text){
+  let headers=[], records=[];
+  if(name.endsWith(".jsonl")){
+    const lines=text.split(/\n/).map(l=>l.trim()).filter(Boolean);
+    records=lines.map(l=>{try{return JSON.parse(l);}catch(e){return {text:l};}});
+    headers=[...new Set(records.flatMap(r=>Object.keys(r)))];
+  } else if(name.endsWith(".txt")){
+    records=text.split(/\n/).map(l=>l.trim()).filter(Boolean).map(t=>({text:t}));
+    headers=["text"];
+  } else {
+    const grid=parseCSV(text);
+    if(!grid.length) return null;
+    headers=grid[0].map(h=>h.trim());
+    records=grid.slice(1).map(r=>{const o={};headers.forEach((h,i)=>o[h]=r[i]??"");return o;});
+  }
+  // pick the most text-like column by default
+  const guess = headers.find(h=>/text|message|tweet|content|body|post|comment/i.test(h)) || headers[headers.length-1];
+  S.file={name, headers, records, column:guess, count:records.length};
+  S.proc="idle"; S.result=null; S.rows=[];
+}
 
-    function esc(s) {
-      return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-    }
+//// ---------------------------------------------------------------- processing
+async function runProcessing(){
+  if(!S.file) return;
+  S.proc="running"; S.step="upload"; render();
+  const rows = S.file.records.map(r=>String(r[S.file.column]??"")).filter(t=>t.trim().length);
+  try{
+    const resp = await fetch("/api/process",{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({rows, privatization_level:S.privLevel}),
+    });
+    if(!resp.ok){ throw new Error((await resp.json()).detail || resp.statusText); }
+    const data = await resp.json();
+    S.result = data;
+    S.rows = data.rows.map(r=>({...r, cat:null, validated:false, dismissed:false}));
+    S.proc="done"; S.step="overview";
+    toast(`Processed ${fmt(data.count)} messages on-device · ${fmt(data.flagged)} flagged`);
+  }catch(e){
+    S.proc="idle";
+    toast("Processing failed: "+e.message);
+  }
+  render();
+}
 
-    function pct(x) {
-      return x == null ? "—" : (x * 100).toFixed(1) + "%";
-    }
+//// ---------------------------------------------------------------- review helpers
+function visibleRows(){
+  let rows = S.rows.filter(r=>!r.dismissed);
+  const f=S.filters;
+  if(f.status==="flagged") rows=rows.filter(r=>r.flagged);
+  else if(f.status==="clean") rows=rows.filter(r=>!r.flagged);
+  if(f.cats.size) rows=rows.filter(r=> r.cat ? f.cats.has(r.cat) : f.cats.has("__unrev"));
+  if(f.sevs.size) rows=rows.filter(r=>f.sevs.has(r.severity));
+  if(f.conf==="low") rows=rows.filter(r=>r.confidence_band==="low");
+  else if(f.conf==="medlow") rows=rows.filter(r=>r.confidence_band!=="high");
+  const sevRank={high:0,medium:1,low:2,none:3};
+  if(S.sort==="confidence") rows.sort((a,b)=>a.confidence-b.confidence);
+  else if(S.sort==="severity") rows.sort((a,b)=>sevRank[a.severity]-sevRank[b.severity]);
+  else rows.sort((a,b)=>(b.p_hate_original||0)-(a.p_hate_original||0));
+  return rows;
+}
+function validatedCount(){ return S.rows.filter(r=>r.validated&&!r.dismissed).length; }
+function reclassifiedCount(){ return S.rows.filter(r=>r.cat).length; }
 
-    function render(d) {
-      const fb = d.fallback
-        ? `<span class="pill fb">fallback · ${esc(d.fallback_reason)}</span>`
-        : `<span class="pill ok">LLM candidate selected</span>`;
-      const cands = (d.candidates || []).map((c) =>
-        `<div class="cand ${c.selected ? "sel" : ""}"><span class="score">score ${c.score.toFixed(3)}</span>${c.selected ? "★ " : ""}${esc(c.text)}</div>`
-      ).join("") || '<div class="hint">No candidates (returned x_priv baseline).</div>';
+//// ---------------------------------------------------------------- actions
+function go(tab){ S.tab=tab; S.expanded=null; render(); }
+function goStep(step){ if(step!=="upload"&&S.proc!=="done"){return;} S.step=step; S.expanded=null; render(); }
+function setPriv(v){ S.privLevel=+v; render(); }
+function toast(msg){ S.toast=msg; render(); clearTimeout(toast._t); toast._t=setTimeout(()=>{S.toast=null;render();},2800); }
 
-      $("out").innerHTML = `
-        <div class="card">
-          <div class="field"><div class="k">Original</div><div class="v mono">${esc(d.original)}</div></div>
-          <div class="field"><div class="k">Token-sanitised (x_priv)</div><div class="v mono">${esc(d.x_priv)}</div></div>
-          <div class="field"><div class="k">Selected output</div><div class="v mono selected">${esc(d.selected)}</div></div>
-          <div class="field">${fb}</div>
-          <div class="stats">
-            <div class="stat"><div class="n">${d.k_generated}</div><div class="l">generated</div></div>
-            <div class="stat"><div class="n">${d.k_valid}</div><div class="l">valid</div></div>
-            <div class="stat"><div class="n">${pct(d.p_hate_original)}</div><div class="l">P(hate) original</div></div>
-            <div class="stat"><div class="n">${pct(d.p_hate_x_priv)}</div><div class="l">P(hate) x_priv</div></div>
-            <div class="stat"><div class="n">${d.epsilon_total ?? "—"}</div><div class="l">ε total</div></div>
+function toggleSel(id){ S.sel.has(id)?S.sel.delete(id):S.sel.add(id); render(); }
+function clearSel(){ S.sel.clear(); render(); }
+function selectAllVisible(){ const v=visibleRows(); const all=v.every(r=>S.sel.has(r.id)); v.forEach(r=>all?S.sel.delete(r.id):S.sel.add(r.id)); render(); }
+
+function openPicker(mode, ids){ if(!ids.length)return; S.picker={mode, ids}; render(); }
+function closePicker(){ S.picker=null; render(); }
+function applyPick(value){
+  const {mode,ids}=S.picker;
+  ids.forEach(id=>{ const r=S.rows.find(x=>x.id===id); if(!r) return;
+    if(mode==="reclassify"){ r.cat=value; r.validated=true; }
+    else if(mode==="severity"){ r.severity=value; }
+  });
+  const n=ids.length;
+  closePicker();
+  toast(mode==="reclassify" ? `Reclassified ${n} item${n>1?"s":""} → ${CAT_MAP[value].label}` : `Severity set to ${value} for ${n} item${n>1?"s":""}`);
+}
+function confirmRows(ids){ ids.forEach(id=>{const r=S.rows.find(x=>x.id===id); if(r)r.validated=true;}); S.sel.clear(); toast(`Confirmed ${ids.length} label${ids.length>1?"s":""}`); }
+function dismissRows(ids){ ids.forEach(id=>{const r=S.rows.find(x=>x.id===id); if(r){r.dismissed=true;r.validated=true;}}); ids.forEach(id=>S.sel.delete(id)); toast(`Dismissed ${ids.length} item${ids.length>1?"s":""}`); }
+
+//// ---------------------------------------------------------------- render
+function render(){
+  renderTabs();
+  const sf=$("surface");
+  if(S.tab==="flow") sf.innerHTML=viewFlow();
+  else if(S.tab==="library") sf.innerHTML=viewLibrary();
+  else if(S.tab==="trends") sf.innerHTML=viewTrends();
+  else if(S.tab==="country") sf.innerHTML=viewCountry();
+  else if(S.tab==="access") sf.innerHTML=viewAccess();
+  renderOverlay();
+  document.querySelectorAll(".rail button[data-tab]").forEach(b=>b.classList.toggle("on",b.dataset.tab===S.tab));
+}
+function renderTabs(){
+  $("tabnav").innerHTML = TABS.map(([id,label])=>
+    `<button class="tab ${S.tab===id?"on":""}" data-tab="${id}">${esc(label)}</button>`).join("");
+}
+function renderOverlay(){
+  let html="";
+  if(S.picker){
+    const isRe=S.picker.mode==="reclassify";
+    const opts = isRe
+      ? CATS.map(c=>`<button class="opt" data-pick="${c.id}"><span class="cdot" style="background:${c.color}"></span>${esc(c.label)}</button>`).join("")
+      : ["high","medium","low"].map(s=>`<button class="opt" data-pick="${s}"><span class="cdot" style="background:${SEVS[s]}"></span><span style="text-transform:capitalize">${s}</span> severity</button>`).join("");
+    html += `<div class="modal-bg" data-act="closePicker"><div class="modal" data-stop>
+      <div style="padding:15px 18px;border-bottom:1px solid #eef0f4;">
+        <div style="font-size:14px;font-weight:700;">${isRe?"Reclassify":"Set severity"} · ${S.picker.ids.length} item${S.picker.ids.length>1?"s":""}</div>
+        <div style="font-size:12px;color:var(--faint);margin-top:2px;">${isRe?"Attribute the target group — recorded as a correction":"Override the model-assigned severity"}</div>
+      </div>
+      <div style="padding:12px;display:flex;flex-direction:column;gap:4px;">${opts}</div>
+    </div></div>`;
+  }
+  if(S.toast){ html += `<div class="toast"><span style="color:#7fe3a4;">✓</span>${esc(S.toast)}</div>`; }
+  $("overlay").innerHTML=html;
+}
+
+//// ------------------------------------------------ FLOW
+function viewFlow(){
+  const cur=STEPS.findIndex(s=>s[0]===S.step);
+  const stepBtns = STEPS.map(([id,label],idx)=>{
+    const cls = S.step===id?"on":(idx<cur&&S.proc==="done"?"done":"");
+    const dis = id!=="upload"&&S.proc!=="done";
+    return `<button class="step ${cls}" data-step="${id}" ${dis?'style="opacity:.45;cursor:default"':''}>${esc(label)}</button>`;
+  }).join("");
+  const subnav=`<div class="subnav"><div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);"><b style="color:var(--ink)">France · 2022 Presidential</b><span style="color:#c2c6d0">▾</span></div>
+      <div style="display:flex;gap:4px;margin-left:8px;">${stepBtns}</div></div>`;
+  if(S.step==="review")
+    return `<div style="display:flex;flex-direction:column;height:100%;">${subnav}${stepReview()}</div>`;
+  let body="";
+  if(S.step==="upload") body=stepUpload();
+  else if(S.step==="overview") body=stepOverview();
+  else if(S.step==="publish") body=stepPublish();
+  return `<div style="display:flex;flex-direction:column;min-height:100%;">${subnav}${body}</div>`;
+}
+
+function stepUpload(){
+  const p=PRIV[S.privLevel];
+  const has=!!S.file;
+  const procSteps=[
+    {label:"Strip personal identifiers (PII)", meta:"names, handles, emails"},
+    {label:"Normalise dialect & spelling", meta:"slang, elongation"},
+    {label:"Label & score hate categories", meta:"on-device model"},
+    {label:"Cluster near-duplicates", meta:"k-anonymity floor"},
+    {label:"Apply differential privacy", meta:"ε per message"},
+  ];
+  const running=S.proc==="running", done=S.proc==="done";
+  const stepHtml=procSteps.map((s,i)=>{
+    let st="todo",g="";
+    if(done){st="ok";g="✓";}
+    else if(running){ st = i<=2?"run":"todo"; g = i<=2?'<span class="spinner"></span>':""; }
+    return `<div class="proc-step"><span class="dot ${st}">${g}</span><span style="font-size:12.5px;color:var(--ink2);flex:1;">${esc(s.label)}</span><span class="mono" style="font-size:11px;color:var(--faint);">${esc(s.meta)}</span></div>`;
+  }).join("");
+  const colSel = has ? S.file.headers.map(h=>`<option ${h===S.file.column?"selected":""}>${esc(h)}</option>`).join("") : "";
+  const cta = done?"Go to overview →":(running?"Processing…":(has?"Process on-device":"Choose a file first"));
+  return `<div class="wrap" style="max-width:1080px;">
+    <h2 class="title">Upload &amp; process a corpus</h2>
+    <p class="lede">The HSD client runs on your device: PII stripped, dialect normalised, labelled &amp; clustered before anything is shared. Raw text never leaves your machine — only the anonymised, audited result is published.</p>
+    <div style="display:flex;gap:20px;align-items:flex-start;">
+      <div style="flex:1;">
+        <div class="drop" id="drop" data-act="pickFile">
+          <div style="font-size:30px;color:#b9c0d4;margin-bottom:8px;">⤓</div>
+          <div style="font-size:14.5px;font-weight:700;color:var(--ink2);">${has?esc(S.file.name):"Drop a .csv / .jsonl / .txt, or click to browse"}</div>
+          <div style="font-size:12.5px;color:var(--faint);margin-top:5px;">${has?`${fmt(S.file.count)} rows · column “${esc(S.file.column)}”`:"election_FR_2022.csv · sample available below"}</div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:10px;align-items:center;">
+          <button class="btn-soft" data-act="useSample">Use sample corpus (France 2022)</button>
+          ${has?`<span style="font-size:12px;color:var(--good);">✓ ${fmt(S.file.count)} rows loaded</span>`:""}
+        </div>
+
+        <div style="margin-top:14px;display:flex;gap:10px;">
+          <div class="field"><div class="l">Country</div><div style="font-size:13.5px;font-weight:600;margin-top:2px;">France ▾</div></div>
+          <div class="field"><div class="l">Election</div><div style="font-size:13.5px;font-weight:600;margin-top:2px;">2022 Presidential ▾</div></div>
+          <div class="field"><div class="l">Text column</div>
+            ${has?`<select data-act="setCol">${colSel}</select>`:`<div style="font-size:13.5px;font-weight:600;margin-top:2px;color:var(--faint)">—</div>`}
           </div>
         </div>
-        <div class="card">
-          <div class="k" style="margin-bottom:6px;color:var(--muted);font-size:0.74rem;text-transform:uppercase;letter-spacing:0.04em;">Candidates</div>
-          ${cands}
-          <details><summary>Raw audit JSON</summary><pre>${esc(JSON.stringify(d.audit, null, 2))}</pre></details>
-        </div>`;
-    }
 
-    async function privatize() {
-      const btn = $("go");
-      btn.disabled = true; btn.textContent = "Privatising…";
-      $("out").innerHTML = "";
-      try {
-        const r = await fetch(API + "/api/privatize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: $("text").value,
-            config: $("config").value,
-            seed: parseInt($("seed").value || "0", 10),
-          }),
-        });
-        const data = await r.json();
-        if (!r.ok) {
-          $("out").innerHTML = `<div class="card err">Error ${r.status}: ${esc(data.detail || "unknown")}</div>`;
-        } else {
-          render(data);
-        }
-      } catch (e) {
-        $("out").innerHTML = `<div class="card err">Request failed: ${esc(e.message)}</div>`;
-      } finally {
-        btn.disabled = false; btn.textContent = "Privatise";
-      }
-    }
+        <div class="card" style="margin-top:20px;padding:18px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:13.5px;font-weight:700;">Privatisation level</span>
+            <span class="mono" style="font-size:12.5px;font-weight:600;color:var(--accent);">${p.name}</span>
+          </div>
+          <div style="font-size:12px;color:#8b909e;margin-bottom:14px;">One control trades utility for privacy — sets PII threshold, k-anonymity floor and the differential-privacy budget together.</div>
+          <input type="range" min="0" max="3" step="1" value="${S.privLevel}" data-act="priv">
+          <div style="display:flex;justify-content:space-between;" class="mono"><span style="font-size:10.5px;color:var(--faint)">Light</span><span style="font-size:10.5px;color:var(--faint)">Standard</span><span style="font-size:10.5px;color:var(--faint)">High</span><span style="font-size:10.5px;color:var(--faint)">Maximum</span></div>
+          <div style="margin-top:14px;display:flex;gap:10px;font-size:12px;">
+            <div style="flex:1;background:#f6f7fb;border-radius:8px;padding:9px 11px;"><div style="color:var(--faint)">Est. utility retained</div><div style="font-weight:700;font-size:15px;margin-top:1px;">${p.util}</div></div>
+            <div style="flex:1;background:#f6f7fb;border-radius:8px;padding:9px 11px;"><div style="color:var(--faint)">Re-identification risk</div><div style="font-weight:700;font-size:15px;margin-top:1px;color:${p.riskColor};">${p.risk}</div></div>
+          </div>
+        </div>
+      </div>
 
-    $("go").addEventListener("click", privatize);
-    $("text").addEventListener("keydown", (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") privatize();
-    });
-    loadConfigs();
-  </script>
+      <div class="card" style="width:330px;flex:none;overflow:hidden;">
+        <div style="padding:13px 16px;border-bottom:1px solid #eef0f4;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:8px;">On-device processing<span class="mono" style="margin-left:auto;font-size:10px;color:${done?'var(--good)':(running?'var(--accent)':'var(--faint)')};">${done?"COMPLETE":(running?"RUNNING…":"READY")}</span></div>
+        <div style="padding:6px 16px 14px;">
+          ${stepHtml}
+          <button class="btn" style="width:100%;margin-top:14px;" data-act="${done?'goOverview':'process'}" ${(!has||running)?"disabled":""}>${esc(cta)}</button>
+          <div style="margin-top:11px;font-size:11px;color:var(--faint);line-height:1.5;">Runs the real TRIAGE-DP pipeline (Layers 1–4) locally via <span class="mono">/api/process</span>. Mock model backend — no downloads.</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function stepOverview(){
+  const r=S.result; if(!r) return `<div class="wrap"><p class="lede">No corpus processed yet.</p></div>`;
+  const sevBars=[
+    {label:"High severity",color:SEVS.high,n:r.severity_hist.high},
+    {label:"Medium severity",color:SEVS.medium,n:r.severity_hist.medium},
+    {label:"Low severity",color:SEVS.low,n:r.severity_hist.low},
+  ];
+  const maxn=Math.max(1,...sevBars.map(b=>b.n));
+  const bars=sevBars.map(b=>`<div style="display:flex;align-items:center;gap:13px;margin-bottom:11px;">
+      <span style="width:140px;flex:none;font-size:13px;display:inline-flex;align-items:center;gap:8px;"><span class="cdot" style="background:${b.color}"></span>${b.label}</span>
+      <div style="flex:1;height:16px;background:#eef1f6;border-radius:3px;overflow:hidden;"><div style="height:100%;width:${Math.round(100*b.n/maxn)}%;background:${b.color};border-radius:3px;"></div></div>
+      <span class="mono" style="width:60px;text-align:right;font-size:12px;color:var(--muted)">${fmt(b.n)}</span>
+    </div>`).join("");
+  return `<div class="wrap" style="max-width:1120px;">
+    <h2 class="title">Processed corpus — the whole picture</h2>
+    <p class="lede">${fmt(r.count)} messages processed on-device with the “${esc(PRIV[r.privatization_level].name)}” privatisation profile. Here's what the model labelled before you validate.</p>
+    <div style="display:flex;gap:12px;margin-bottom:20px;">
+      <div class="stat"><div class="k">MESSAGES</div><div class="v">${fmt(r.count)}</div></div>
+      <div class="stat"><div class="k">FLAGGED</div><div class="v">${fmt(r.flagged)} <span style="font-size:13px;color:var(--faint);font-weight:600;">· ${r.flagged_pct}%</span></div></div>
+      <div class="stat"><div class="k">GROUPS</div><div class="v">${fmt(r.clusters)}</div></div>
+      <div class="stat" style="border-color:var(--warn-border);background:var(--warn-bg);"><div class="k" style="color:var(--warn)">LOW-CONFIDENCE</div><div class="v" style="color:var(--warn)">${fmt(r.low_confidence)}</div></div>
+    </div>
+    <div class="card" style="padding:18px 20px;margin-bottom:18px;">
+      <div class="label" style="margin-bottom:15px;">FLAGGED BY SEVERITY · MODEL-ASSIGNED, BEFORE VALIDATION</div>
+      ${bars}
+    </div>
+    <div style="display:flex;gap:14px;align-items:center;border:1px solid var(--accent-border);background:var(--accent-soft);border-radius:11px;padding:15px 18px;">
+      <div style="flex:1;font-size:13.5px;color:#2a3550;line-height:1.5;"><b>${fmt(r.flagged)} flagged messages</b> across ${fmt(r.clusters)} groups${r.low_confidence?`, including <b>${fmt(r.low_confidence)}</b> low-confidence labels most likely to be wrong`:""}. Start the review there.</div>
+      <button class="btn" data-act="goReview">Review &amp; reclassify →</button>
+    </div>
+  </div>`;
+}
+
+function stepReview(){
+  const all=S.rows.filter(r=>!r.dismissed);
+  const flaggedAll=all.filter(r=>r.flagged);
+  const vis=visibleRows();
+  const catCounts={}; CATS.forEach(c=>catCounts[c.id]=0); let unrev=0;
+  flaggedAll.forEach(r=>{ r.cat?catCounts[r.cat]++:unrev++; });
+  const sevCounts={high:0,medium:0,low:0}; flaggedAll.forEach(r=>{if(r.severity in sevCounts)sevCounts[r.severity]++;});
+  const f=S.filters;
+  const catFacets = [{id:"__unrev",label:"Unreviewed",color:"#b5bac6",count:unrev}]
+    .concat(CATS.map(c=>({id:c.id,label:c.label,color:c.color,count:catCounts[c.id]})))
+    .map(c=>`<label class="facet-row" data-fcat="${c.id}"><span class="chk ${f.cats.has(c.id)?'on':''}">${f.cats.has(c.id)?'✓':''}</span><span class="cdot" style="background:${c.color}"></span>${esc(c.label)}<span class="mono" style="margin-left:auto;font-size:11px;color:var(--faint)">${c.count}</span></label>`).join("");
+  const sevFacets = ["high","medium","low"].map(s=>`<label class="facet-row" data-fsev="${s}"><span class="chk ${f.sevs.has(s)?'on':''}">${f.sevs.has(s)?'✓':''}</span><span class="cdot" style="background:${SEVS[s]}"></span><span style="text-transform:capitalize">${s}</span><span class="mono" style="margin-left:auto;font-size:11px;color:var(--faint)">${sevCounts[s]}</span></label>`).join("");
+  const confPresets = [["all","All"],["medlow","< 0.85"],["low","< 0.70"]].map(([k,l])=>`<button class="preset ${f.conf===k?'on':''}" data-fconf="${k}">${l}</button>`).join("");
+  const statusPresets = [["flagged","Flagged"],["clean","Clean"],["all","All"]].map(([k,l])=>`<button class="preset ${f.status===k?'on':''}" data-fstatus="${k}">${l}</button>`).join("");
+
+  const vcount=validatedCount();
+  const vpct = flaggedAll.length? Math.round(100*vcount/Math.max(flaggedAll.length,1)) : 0;
+  const selIds=[...S.sel];
+  const allVisSel = vis.length>0 && vis.every(r=>S.sel.has(r.id));
+
+  const rowsHtml = vis.slice(0,400).map(r=>{
+    const sel=S.sel.has(r.id);
+    const sevColor = r.severity==="none"?"#cdd2de":SEVS[r.severity];
+    const cat = r.cat?CAT_MAP[r.cat]:null;
+    const confColor = r.confidence_band==="low"?"#b45309":(r.confidence_band==="medium"?"#8b6f00":"#5b6170");
+    const expanded=S.expanded===r.id;
+    const tr=`<tr class="rowline ${sel?'sel':''}">
+      <td style="width:34px;padding:9px 0 9px 18px;"><span class="chk ${sel?'on':''}" data-act="toggleSel" data-id="${r.id}">${sel?'✓':''}</span></td>
+      <td style="width:64px;"><span class="mono" style="font-size:12px;">${r.validated?'<span style="color:var(--good)">✓ </span>':''}#${r.id}</span></td>
+      <td style="padding:9px 12px 9px 0;font-size:13px;color:var(--ink2);cursor:pointer;" data-act="expand" data-id="${r.id}">${esc(r.x_priv||"—")}<span style="color:var(--faint);font-size:11px;margin-left:8px;">${expanded?'▴ hide audit':'▾ audit'}</span></td>
+      <td style="width:170px;font-size:12px;">${cat?`<span class="catbadge"><span class="cdot" style="background:${cat.color}"></span>${esc(cat.label)}</span>`:`<span style="color:var(--faint);">unreviewed</span>`}</td>
+      <td style="width:96px;"><span class="mono" style="font-size:12px;color:${confColor}">${r.confidence.toFixed(2)}</span></td>
+      <td style="width:78px;"><span class="sevbadge" style="color:${sevColor};background:${r.severity==='none'?'#f1f2f6':sevColor+'22'}">${r.severity==='none'?'clean':r.severity}</span></td>
+      <td style="width:96px;padding-right:16px;"><div style="display:flex;justify-content:flex-end;gap:4px;">
+        <button class="iconbtn" title="Reclassify" data-act="reOne" data-id="${r.id}">✎</button>
+        <button class="iconbtn" title="Confirm" data-act="confirmOne" data-id="${r.id}">✓</button>
+        <button class="iconbtn" title="Dismiss" data-act="dismissOne" data-id="${r.id}">✕</button>
+      </div></td>
+    </tr>`;
+    if(!expanded) return tr;
+    const detail=`<tr><td colspan="7" class="detail">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+        <div><div class="label" style="margin-bottom:5px;">ORIGINAL (on-device only)</div><div style="font-size:12.5px;">${esc(r.original)}</div></div>
+        <div><div class="label" style="margin-bottom:5px;">ANONYMISED (x_priv · published)</div><div style="font-size:12.5px;">${esc(r.x_priv)}</div></div>
+      </div>
+      <div style="display:flex;gap:24px;margin-top:12px;" class="mono">
+        <span style="font-size:11.5px;color:var(--muted)">P(hate) orig <b style="color:var(--ink)">${r.p_hate_original!=null?r.p_hate_original.toFixed(2):'—'}</b></span>
+        <span style="font-size:11.5px;color:var(--muted)">P(hate) anon <b style="color:var(--ink)">${r.p_hate_x_priv!=null?r.p_hate_x_priv.toFixed(2):'—'}</b></span>
+        <span style="font-size:11.5px;color:var(--muted)">tokens changed <b style="color:var(--ink)">${r.tokens_changed}</b></span>
+        <span style="font-size:11.5px;color:var(--muted)">ε total <b style="color:var(--ink)">${r.epsilon_total!=null?r.epsilon_total.toFixed(1):'—'}</b></span>
+        ${r.fallback?'<span style="font-size:11.5px;color:var(--warn)">⚠ fallback</span>':''}
+      </div></td></tr>`;
+    return tr+detail;
+  }).join("");
+
+  const bulkBar = selIds.length? `<div style="display:flex;align-items:center;gap:11px;padding:9px 18px;border-bottom:1px solid var(--line);background:var(--accent-soft);flex:none;">
+      <span class="chk on" style="cursor:default">✓</span>
+      <span style="font-size:12.5px;color:#2a3550;font-weight:600;">${selIds.length} item${selIds.length>1?'s':''} selected</span>
+      <span style="height:18px;width:1px;background:var(--accent-border);"></span>
+      <button class="btn" style="padding:6px 13px;font-size:12px;" data-act="bulkReclassify">Reclassify…</button>
+      <button class="btn-ghost" data-act="bulkSeverity">Set severity</button>
+      <button class="btn-soft" data-act="bulkDismiss">Dismiss</button>
+      <button class="btn-soft" style="margin-left:auto;color:var(--good);border-color:var(--good-border);" data-act="bulkConfirm">✓ Confirm labels</button>
+      <button style="background:none;border:none;color:var(--faint);cursor:pointer;font-size:12px;" data-act="clearSel">Clear</button>
+    </div>`:"";
+
+  return `<div style="display:flex;flex:1;min-height:0;">
+    <div class="facets scroll">
+      <div class="label" style="margin-bottom:10px;">STATUS</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">${statusPresets}</div>
+      <div class="facet-h"><span class="label">CATEGORY (assigned)</span>${f.cats.size?`<span data-act="clearCats" style="font-size:10.5px;color:var(--accent);cursor:pointer;">clear</span>`:''}</div>
+      <div style="display:flex;flex-direction:column;gap:2px;">${catFacets}</div>
+      <div class="facet-h"><span class="label">CONFIDENCE</span></div>
+      <div style="display:flex;gap:5px;">${confPresets}</div>
+      <div class="facet-h"><span class="label">SEVERITY</span></div>
+      <div style="display:flex;flex-direction:column;gap:2px;">${sevFacets}</div>
+    </div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;padding:0 18px;border-bottom:1px solid var(--line);background:#fcfcfd;flex:none;">
+        <div style="padding:10px 18px 10px 0;"><div class="label" style="font-size:9px;">SHOWING</div><div class="mono" style="font-size:15px;font-weight:600;">${fmt(vis.length)} of ${fmt(all.length)}</div></div>
+        <div style="padding:10px 18px;border-left:1px solid #eef0f4;"><div class="label" style="font-size:9px;">VALIDATED</div><div class="mono" style="font-size:15px;font-weight:600;color:var(--good);">${fmt(vcount)} · ${vpct}%</div></div>
+        <div style="flex:1;padding:0 18px;"><div style="height:5px;border-radius:99px;background:#eceef4;overflow:hidden;"><div style="width:${vpct}%;height:100%;background:var(--accent);transition:width .4s;"></div></div></div>
+        <button class="btn-ghost" data-act="cycleSort">sort: ${S.sort}</button>
+      </div>
+      ${bulkBar}
+      <div style="display:flex;align-items:center;padding:8px 18px;border-bottom:1px solid var(--line);background:#fafbfc;flex:none;" class="label">
+        <span style="width:34px;"><span class="chk ${allVisSel?'on':''}" data-act="selectAll">${allVisSel?'✓':''}</span></span>
+        <span style="width:64px;">ROW</span>
+        <span style="flex:1;">ANONYMISED MESSAGE · names stripped</span>
+        <span style="width:170px;">CATEGORY</span>
+        <span style="width:96px;">CONF</span>
+        <span style="width:78px;">SEVERITY</span>
+        <span style="width:96px;text-align:right;">ACTIONS</span>
+      </div>
+      <div class="scroll" style="flex:1;min-height:0;overflow:auto;">
+        <table>${rowsHtml||`<tr><td style="padding:30px;text-align:center;color:var(--faint);">No rows match these filters.</td></tr>`}</table>
+        ${vis.length>400?`<div style="padding:14px;text-align:center;color:var(--faint);font-size:12px;">Showing first 400 of ${fmt(vis.length)} — narrow the filters to see more.</div>`:''}
+      </div>
+      <div class="footerbar">
+        <span><b>Space</b> select</span><span><b>E</b> reclassify</span><span><b>↵</b> confirm</span><span><b>X</b> dismiss</span><span><b>A</b> all</span>
+        <span style="margin-left:auto;color:#6b7185;">${fmt(reclassifiedCount())} reclassified · ${fmt(vcount)} validated</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function stepPublish(){
+  const r=S.result; if(!r) return `<div class="wrap"><p class="lede">Nothing to publish yet.</p></div>`;
+  const vcount=validatedCount(), recl=reclassifiedCount();
+  return `<div class="wrap" style="max-width:880px;">
+    <h2 class="title">Publish to the Observatory</h2>
+    <p class="lede">Validated &amp; anonymised. Corrections are recorded against your name and feed model retraining. Raw text stays on your device.</p>
+    <div style="display:flex;gap:12px;margin-bottom:18px;">
+      <div class="stat" style="border-color:var(--good-border);background:var(--good-bg);"><div class="k" style="color:var(--good)">ANONYMISED</div><div class="v" style="color:var(--good)">${fmt(r.count)}</div></div>
+      <div class="stat"><div class="k">VALIDATED ITEMS</div><div class="v">${fmt(vcount)}</div></div>
+      <div class="stat"><div class="k">RECLASSIFIED</div><div class="v" style="color:var(--accent)">${fmt(recl)}</div></div>
+    </div>
+    <div class="card" style="overflow:hidden;margin-bottom:18px;">
+      <div style="padding:13px 16px;border-bottom:1px solid #eef0f4;font-size:13px;font-weight:700;">What gets shared</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #f4f5f8;"><div><div style="font-size:13px;font-weight:600;">Anonymised corpus</div><div style="font-size:11.5px;color:var(--faint);margin-top:1px;">to verified researchers, by request</div></div><span style="font-size:11px;font-weight:700;color:var(--good);background:var(--good-bg);border-radius:99px;padding:4px 11px;">Restricted</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;"><div><div style="font-size:13px;font-weight:600;">Aggregated category stats</div><div style="font-size:11.5px;color:var(--faint);margin-top:1px;">public trend lines for media &amp; NGOs</div></div><span style="font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:99px;padding:4px 11px;">Public</span></div>
+    </div>
+    <button class="btn" style="width:100%;padding:13px;" data-act="publish">Publish ${fmt(r.count)} anonymised messages to the Observatory</button>
+  </div>`;
+}
+
+//// ------------------------------------------------ MOCK TABS
+function viewLibrary(){
+  const corp=[
+    {flag:"🇫🇷 FR",status:"Yours · draft",sc:"#946f00",bg:"#fdf6ea",title:"France · 2022 Presidential",sub:"Twitter / X · French",msgs:"284.1k",flagged:"38.2k",date:"In review"},
+    {flag:"🇫🇮 FI",status:"Published",sc:"#2f7d57",bg:"#e8f3ec",title:"Finland · 2023 Eduskunta",sub:"Suomi24 · Finnish",msgs:"96.4k",flagged:"7.1k",date:"Apr 2023"},
+    {flag:"🇩🇪 DE",status:"Published",sc:"#2f7d57",bg:"#e8f3ec",title:"Germany · 2021 Bundestag",sub:"Twitter / X · German",msgs:"412.0k",flagged:"55.9k",date:"Sep 2021"},
+    {flag:"🇸🇪 SE",status:"Published",sc:"#2f7d57",bg:"#e8f3ec",title:"Sweden · 2022 Riksdag",sub:"Flashback · Swedish",msgs:"188.3k",flagged:"21.0k",date:"Sep 2022"},
+    {flag:"🇪🇸 ES",status:"Published",sc:"#2f7d57",bg:"#e8f3ec",title:"Spain · 2023 General",sub:"Twitter / X · Spanish",msgs:"233.7k",flagged:"29.4k",date:"Jul 2023"},
+    {flag:"🇵🇱 PL",status:"Restricted",sc:"#3b5bdb",bg:"#eef1fc",title:"Poland · 2023 Sejm",sub:"Wykop · Polish",msgs:"151.2k",flagged:"18.8k",date:"Oct 2023"},
+  ];
+  const cards=corp.map(c=>`<div class="card" style="padding:16px 17px;cursor:pointer;" data-act="goCountry">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;"><span class="mono" style="font-size:11px;font-weight:600;color:var(--ink2);background:#f1f2f6;border-radius:5px;padding:3px 8px;">${c.flag}</span><span style="font-size:10.5px;font-weight:700;color:${c.sc};background:${c.bg};border-radius:99px;padding:3px 9px;">${c.status}</span></div>
+      <div style="font-size:15px;font-weight:700;letter-spacing:-.2px;">${c.title}</div>
+      <div style="font-size:12.5px;color:var(--faint);margin-top:2px;">${c.sub}</div>
+      <div style="display:flex;gap:14px;margin-top:13px;padding-top:13px;border-top:1px solid #f4f5f8;font-size:12px;color:var(--muted);"><span><b class="mono">${c.msgs}</b> msgs</span><span><b class="mono">${c.flagged}</b> flagged</span><span style="margin-left:auto;color:var(--faint)">${c.date}</span></div>
+    </div>`).join("");
+  return `<div class="wrap" style="max-width:1180px;">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;">
+      <div><h2 class="title">Corpus library</h2><p class="lede" style="margin:0;">Anonymised election hate-speech corpuses shared across 14 Council of Europe member states.</p></div>
+    </div>
+    ${mockBanner("This library view is a static prototype. The live, wired flow is under ▸ Process & validate.")}
+    <div class="grid3">${cards}</div>
+  </div>`;
+}
+function viewTrends(){
+  return `<div class="wrap" style="max-width:1120px;">
+    <h2 class="title">Trends explorer</h2>
+    <p class="lede">Every plotted point is a national election — hate speech as a share of all election content, with legislation markers overlaid.</p>
+    ${mockBanner("Prototype view with illustrative data — not wired to the pipeline.")}
+    <div class="card" style="padding:20px 22px;">
+      <div style="font-size:13.5px;font-weight:700;margin-bottom:14px;">Hate speech as a share of all election content · 2010–2025</div>
+      ${sparkSVG()}
+      <div class="mono" style="margin-top:10px;font-size:10.5px;color:var(--faint);">FI 2011·15·19·23 · DE 2013·17·21·25 · SE 2010·14·18·22</div>
+    </div>
+  </div>`;
+}
+function viewCountry(){
+  const cats=[["Religion","#6741d9",34],["Ethnicity / nationality","#1971c2",61],["Gender","#c2255c",22],["Sexual orientation","#e8590c",15],["Political","#2f9e44",48],["Other","#868e96",9]];
+  const max=Math.max(...cats.map(c=>c[2]));
+  const bars=cats.map(c=>`<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;"><span style="width:150px;flex:none;font-size:12.5px;display:inline-flex;align-items:center;gap:8px;"><span class="cdot" style="background:${c[1]}"></span>${c[0]}</span><div style="flex:1;height:14px;background:#eef1f6;border-radius:3px;overflow:hidden;"><div style="height:100%;width:${Math.round(100*c[2]/max)}%;background:${c[1]};border-radius:3px;"></div></div><span class="mono" style="width:42px;text-align:right;font-size:11.5px;color:var(--muted)">${c[2]}%</span></div>`).join("");
+  return `<div class="wrap" style="max-width:1120px;">
+    <h2 class="title">France · 2022 Presidential</h2>
+    <p class="lede">Deep-dive into one corpus: category mix, severity, and what legislation changed.</p>
+    ${mockBanner("Prototype deep-dive with illustrative numbers.")}
+    <div style="display:flex;gap:14px;">
+      <div class="card" style="flex:1;padding:18px 20px;"><div class="label" style="margin-bottom:14px;">CATEGORY MIX</div>${bars}</div>
+      <div class="card" style="width:300px;flex:none;padding:18px 20px;"><div class="label" style="margin-bottom:14px;">LEGISLATION TIMELINE</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;gap:11px;"><span style="width:9px;height:9px;border-radius:99px;background:var(--accent);flex:none;margin-top:3px;"></span><div><div style="font-size:12.5px;font-weight:600;">Loi Avia partial enforcement</div><div style="font-size:11.5px;color:var(--faint);">Jun 2020 · platform takedown duty</div></div></div>
+          <div style="display:flex;gap:11px;"><span style="width:9px;height:9px;border-radius:99px;background:#6d28d9;flex:none;margin-top:3px;"></span><div><div style="font-size:12.5px;font-weight:600;">EU DSA in force</div><div style="font-size:11.5px;color:var(--faint);">Nov 2022 · systemic-risk audits</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function viewAccess(){
+  const people=[["Renaissance Numérique","Owner · full control","Owner","#3b5bdb","#eef1fc"],["CNRS · Médialab","Anonymised corpus, by request","Researcher","#2f7d57","#e8f3ec"],["EU DisinfoLab","Aggregated stats only","Viewer","#5b6170","#f1f2f6"],["Council of Europe","Aggregated stats only","Viewer","#5b6170","#f1f2f6"]];
+  const rows=people.map(p=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #f4f5f8;"><div><div style="font-size:13.5px;font-weight:600;">${p[0]}</div><div style="font-size:12px;color:var(--faint);margin-top:1px;">${p[1]}</div></div><span style="font-size:11px;font-weight:700;color:${p[3]};background:${p[4]};border-radius:99px;padding:4px 11px;">${p[2]}</span></div>`).join("");
+  return `<div class="wrap" style="max-width:880px;">
+    <h2 class="title">Access &amp; sharing</h2>
+    <p class="lede">You stay the corpus owner. Any legal request for underlying raw data comes to you — the Observatory only ever holds the anonymised result.</p>
+    ${mockBanner("Prototype access list.")}
+    <div class="card" style="overflow:hidden;"><div style="padding:13px 16px;border-bottom:1px solid #eef0f4;font-size:13px;font-weight:700;">Who has access</div>${rows}</div>
+  </div>`;
+}
+function mockBanner(t){ return `<div class="mock-banner"><span>◐</span><span>${esc(t)}</span></div>`; }
+function sparkSVG(){
+  const series=[["#3b5bdb",[40,60,55,80,70,90,85,110,100,130]],["#2f9e44",[30,28,35,32,40,38,50,48,60,58]],["#e8590c",[20,25,30,28,45,55,60,75,80,95]]];
+  const W=860,H=200,pad=20, n=10;
+  const x=i=>pad+i*(W-2*pad)/(n-1);
+  const all=series.flatMap(s=>s[1]); const mx=Math.max(...all);
+  const y=v=>H-pad-(v/mx)*(H-2*pad);
+  const lines=series.map(([c,d])=>{
+    const pts=d.map((v,i)=>`${x(i)},${y(v)}`).join(" ");
+    const dots=d.map((v,i)=>`<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="#fff" stroke="${c}" stroke-width="2"/>`).join("");
+    return `<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;">
+    <line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#e7e9ef"/>
+    <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${H-pad}" stroke="#e7e9ef"/>
+    ${lines}</svg>`;
+}
+
+//// ---------------------------------------------------------------- events
+document.addEventListener("click",(e)=>{
+  const tabBtn=e.target.closest("[data-tab]"); if(tabBtn){ go(tabBtn.dataset.tab); return; }
+  const stepBtn=e.target.closest("[data-step]"); if(stepBtn){ goStep(stepBtn.dataset.step); return; }
+  const fcat=e.target.closest("[data-fcat]"); if(fcat){ const id=fcat.dataset.fcat; S.filters.cats.has(id)?S.filters.cats.delete(id):S.filters.cats.add(id); render(); return; }
+  const fsev=e.target.closest("[data-fsev]"); if(fsev){ const s=fsev.dataset.fsev; S.filters.sevs.has(s)?S.filters.sevs.delete(s):S.filters.sevs.add(s); render(); return; }
+  const fconf=e.target.closest("[data-fconf]"); if(fconf){ S.filters.conf=fconf.dataset.fconf; render(); return; }
+  const fstatus=e.target.closest("[data-fstatus]"); if(fstatus){ S.filters.status=fstatus.dataset.fstatus; render(); return; }
+  const pick=e.target.closest("[data-pick]"); if(pick){ applyPick(pick.dataset.pick); return; }
+
+  const act=e.target.closest("[data-act]"); if(!act) return;
+  const id = act.dataset.id!=null? +act.dataset.id : null;
+  const A=act.dataset.act;
+  switch(A){
+    case "pickFile": $("filepick").click(); break;
+    case "useSample": loadSample(); break;
+    case "setCol": break;
+    case "priv": break;
+    case "process": runProcessing(); break;
+    case "goOverview": goStep("overview"); break;
+    case "goReview": goStep("review"); break;
+    case "goCountry": go("country"); break;
+    case "cycleSort": S.sort = S.sort==="confidence"?"severity":(S.sort==="severity"?"phate":"confidence"); render(); break;
+    case "toggleSel": toggleSel(id); break;
+    case "selectAll": selectAllVisible(); break;
+    case "clearSel": clearSel(); break;
+    case "clearCats": S.filters.cats.clear(); render(); break;
+    case "expand": S.expanded = S.expanded===id?null:id; render(); break;
+    case "reOne": openPicker("reclassify",[id]); break;
+    case "confirmOne": confirmRows([id]); render(); break;
+    case "dismissOne": dismissRows([id]); render(); break;
+    case "bulkReclassify": openPicker("reclassify",[...S.sel]); break;
+    case "bulkSeverity": openPicker("severity",[...S.sel]); break;
+    case "bulkConfirm": confirmRows([...S.sel]); render(); break;
+    case "bulkDismiss": dismissRows([...S.sel]); render(); break;
+    case "closePicker": if(!e.target.closest("[data-stop]")) closePicker(); break;
+    case "publish": toast("Published to the Observatory ✓ — corrections queued for retraining"); break;
+  }
+});
+document.addEventListener("change",(e)=>{
+  if(e.target.closest("[data-act='setCol']")){ S.file.column=e.target.value; render(); }
+});
+document.addEventListener("input",(e)=>{
+  if(e.target.closest("[data-act='priv']")){ setPriv(e.target.value); }
+});
+$("filepick").addEventListener("change", (e)=>{
+  const file=e.target.files[0]; if(!file) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ loadFile(file.name, rd.result); render(); };
+  rd.readAsText(file);
+  e.target.value="";
+});
+document.addEventListener("dragover",(e)=>{ if(e.target.closest("#drop")){e.preventDefault(); e.target.closest("#drop").classList.add("hot");}});
+document.addEventListener("dragleave",(e)=>{ const d=e.target.closest("#drop"); if(d)d.classList.remove("hot");});
+document.addEventListener("drop",(e)=>{ const d=e.target.closest("#drop"); if(!d)return; e.preventDefault(); d.classList.remove("hot");
+  const file=e.dataTransfer.files[0]; if(!file)return; const rd=new FileReader(); rd.onload=()=>{loadFile(file.name,rd.result);render();}; rd.readAsText(file);});
+
+document.addEventListener("keydown",(e)=>{
+  if(S.tab!=="flow"||S.step!=="review"||S.picker) return;
+  if(["INPUT","SELECT","TEXTAREA"].includes(document.activeElement.tagName)) return;
+  const ids=[...S.sel]; if(!ids.length) return;
+  if(e.key==="e"||e.key==="E"){ openPicker("reclassify",ids); }
+  else if(e.key==="x"||e.key==="X"){ dismissRows(ids); render(); }
+  else if(e.key==="Enter"){ confirmRows(ids); render(); }
+  else if(e.key==="a"||e.key==="A"){ selectAllVisible(); }
+});
+
+async function loadSample(){
+  try{
+    const resp=await fetch("/static/sample_election_FR_2022.csv");
+    const text=await resp.text();
+    loadFile("election_FR_2022.csv", text);
+    toast(`Loaded sample · ${fmt(S.file.count)} rows`);
+  }catch(e){ toast("Could not load sample corpus"); }
+  render();
+}
+
+render();
+</script>
 </body>
 </html>
