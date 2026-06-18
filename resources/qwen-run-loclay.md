@@ -1236,3 +1236,100 @@ All listed quants utilize our dynamic metholodgy. Even `UD-IQ2_M` uses a the sam
 #### Qwen3.5-397B-A17B Benchmarks
 
 <figure><img src="/files/dm6CkWnpWnwzr28YSNjW" alt=""><figcaption></figcaption></figure>
+
+---
+
+## EM-HSD v2 integration (NOBS)
+
+This section maps Unsloth Qwen3.5 local inference to the **EM-HSD 2.0** paraphrase backend in `em-hsd-v2/`.
+
+### Two backends (do not mix GGUF with FastLanguageModel)
+
+| Config `generation.backend` | Model repo | Runtime | Unsloth doc |
+|---------------------------|------------|---------|-------------|
+| **`llama_cpp`** (recommended for `*-GGUF`) | `unsloth/Qwen3.5-0.8B-GGUF` | **llama-server** + OpenAI API | Qwen3.5 Small + llama-server sections above |
+| **`unsloth`** | `Qwen/Qwen3.5-0.8B` (safetensors) | `FastLanguageModel.from_pretrained` | [Fine-tune Qwen3.5](https://unsloth.ai/docs/models/qwen3.5/fine-tune) |
+
+**Important:** `unsloth/Qwen3.5-0.8B-GGUF` is **not** loadable via `FastLanguageModel`. GGUF requires **llama.cpp**. Qwen3.5 GGUF does **not** work in Ollama (see warning in [Inference Tutorials](#qwen35-inference-tutorials)).
+
+### EM-HSD quickstart (0.8B GGUF)
+
+**1. Build llama.cpp** (once) — same as [Qwen3.5 Small (0.8B • 2B • 4B • 9B)](#qwen35-small-08b--2b--4b--9b), step 1.
+
+**2. Download GGUF + mmproj:**
+
+```bash
+cd em-hsd-v2
+python scripts/download_qwen_gguf.py
+```
+
+Or manually (Unsloth recommended quant `UD-Q4_K_XL`):
+
+```bash
+hf download unsloth/Qwen3.5-0.8B-GGUF \
+  --include "*UD-Q4_K_XL*" \
+  --include "*mmproj-F16*"
+```
+
+**3. Start llama-server** (terminal 1) — **instruct, non-thinking, general tasks** (0.8B has reasoning **off** by default):
+
+```bash
+cd em-hsd-v2
+bash scripts/start_llama_server.sh
+```
+
+Manual equivalent (change `9B` → `0.8B` in Unsloth Small examples):
+
+```bash
+export LLAMA_CACHE="unsloth/Qwen3.5-0.8B-GGUF"
+./llama.cpp/llama-server \
+  -hf unsloth/Qwen3.5-0.8B-GGUF:UD-Q4_K_XL \
+  --temp 0.7 --top-p 0.8 --top-k 20 --min-p 0.00 \
+  --alias "unsloth/Qwen3.5-0.8B-GGUF" \
+  --port 8001
+```
+
+Sampling matches Unsloth **Instruct (non-thinking) mode — general tasks**: `temperature=0.7, top_p=0.8, top_k=20, presence_penalty=1.5`.
+
+**4. Run EM-HSD** (terminal 2):
+
+```bash
+cd em-hsd-v2
+pip install openai
+PYTHONPATH=src python scripts/test_qwen.py --config configs/em-hsd-v2-qwen35-08b.yaml
+```
+
+### Config (`configs/em-hsd-v2.yaml`)
+
+```yaml
+em_hsd_v2:
+  generation_temperature: 0.7
+
+generation:
+  backend: llama_cpp
+  model: unsloth/Qwen3.5-0.8B-GGUF
+  quant: UD-Q4_K_XL
+  top_p: 0.8
+  top_k: 20
+  min_p: 0.0
+  presence_penalty: 1.5
+  repetition_penalty: 1.0
+  enable_thinking: false
+  llama_server_url: http://127.0.0.1:8001/v1
+```
+
+Code: `em-hsd-v2/src/em_hsd/generative_proposer.py` → `LlamaServerProposer` (OpenAI client to llama-server, with `extra_body` for `top_k`, `min_p`, `repetition_penalty` per Unsloth tool-calling examples).
+
+### Hardware (0.8B)
+
+~**3.5 GB** RAM+VRAM for 4-bit Dynamic GGUF (see usage table above). Works on GTX 1060 via llama.cpp.
+
+### Optional safetensors fallback (no llama-server)
+
+```yaml
+generation:
+  backend: unsloth
+  model: unsloth/Qwen3.5-0.8B-GGUF
+  unsloth_model: Qwen/Qwen3.5-0.8B
+  load_in_4bit: true
+```

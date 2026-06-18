@@ -32,6 +32,12 @@ def main() -> int:
     cfg.spine.rng = make_row_rng(0, run_seed="qwen-smoke")
     init_spine_resources(cfg)
 
+    if cfg.generation.backend == "llama_cpp":
+        print(
+            "Note: start llama-server first: bash scripts/start_llama_server.sh",
+            flush=True,
+        )
+
     print(f"Loading proposer ({cfg.generation.backend}: {cfg.generation.model})...")
     proposer = get_proposer(cfg)
     x_priv, _ = token_sanitize(args.text, cfg, cfg.em_hsd_v2.epsilon_1)

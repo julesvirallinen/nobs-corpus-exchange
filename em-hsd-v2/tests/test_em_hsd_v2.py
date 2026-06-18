@@ -107,10 +107,13 @@ def test_load_config(cfg):
     assert cfg.utility.label_threshold == 0.5
 
 
-def test_production_config_utility_hf():
+def test_production_config_llama_cpp():
     prod = load_em_hsd_config(str(ROOT / "configs" / "em-hsd-v2.yaml"))
     assert prod.utility.backend == "hf"
-    assert prod.utility.model == "unitary/unbiased-toxic-roberta"
+    assert prod.generation.backend == "llama_cpp"
+    assert prod.generation.model == "unsloth/Qwen3.5-0.8B-GGUF"
+    assert prod.generation.quant == "UD-Q4_K_XL"
+    assert prod.generation.enable_thinking is False
 
 
 def test_multilabel_analyze_from_logits():
@@ -154,6 +157,19 @@ def test_derive_severity_tiers():
 
     severity_mild, _ = _derive_severity({"toxicity": 0.25}, 0.25)
     assert severity_mild == "mild"
+
+
+def test_qwen_gguf_model_resolution():
+    from em_hsd.qwen_models import (
+        is_gguf_repo,
+        llama_server_model_id,
+        resolve_unsloth_safetensors_model,
+    )
+
+    assert is_gguf_repo("unsloth/Qwen3.5-0.8B-GGUF")
+    assert not is_gguf_repo("Qwen/Qwen3.5-0.8B")
+    assert resolve_unsloth_safetensors_model("unsloth/Qwen3.5-0.8B-GGUF") == "Qwen/Qwen3.5-0.8B"
+    assert llama_server_model_id("unsloth/Qwen3.5-0.8B-GGUF") == "unsloth/Qwen3.5-0.8B-GGUF"
 
 
 def test_composed_mode_skips_phase_1a():

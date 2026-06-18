@@ -1,4 +1,4 @@
-"""Generative paraphrase proposers (mock + Unsloth Qwen3.5)."""
+"""Generative paraphrase proposers (mock + llama.cpp + Unsloth Qwen3.5)."""
 
 from __future__ import annotations
 
@@ -7,6 +7,11 @@ from typing import List, Optional, Protocol, Sequence
 import numpy as np
 
 from .config import EmHsdConfig
+from .qwen_models import (
+    is_gguf_repo,
+    llama_server_model_id,
+    resolve_unsloth_safetensors_model,
+)
 
 _PARAPHRASE_PROMPT = """Rewrite the post below with different wording and style.
 Rules:
@@ -109,7 +114,15 @@ class TransformersQwenProposer:
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         gen = self.config.generation
-        model_name = gen.model
+        model_name = resolve_unsloth_safetensors_model(
+            gen.model, gen.unsloth_model,
+        )
+        if is_gguf_repo(gen.model) and model_name == gen.model:
+            raise ValueError(
+                f"generation.model {gen.model!r} is a GGUF repo; set "
+                "generation.unsloth_model to a safetensors id (e.g. Qwen/Qwen3.5-0.8B) "
+                "or use generation.backend: llama_cpp with llama-server."
+            )
         print(f"Loading transformers model: {model_name}", flush=True)
         self._tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
         if self._tokenizer.pad_token is None:
@@ -185,6 +198,8 @@ class TransformersQwenProposer:
                     max_new_tokens=gen.max_new_tokens,
                     do_sample=True,
                     temperature=self.config.em_hsd_v2.generation_temperature,
+                    top_p=gen.top_p,
+                    top_k=gen.top_k,
                     pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
                 )
             new_tokens = generated[0][inputs["input_ids"].shape[1]:]
@@ -215,6 +230,11 @@ class UnslothQwenProposer:
         from unsloth import FastLanguageModel
 
         gen = self.config.generation
+        model_name = resolve_unsloth_safetensors_model(
+            gen.model, gen.unsloth_model,
+        )
+        if is_gguf_repo(gen.model) and not gen.unsloth_model.strip():
+            model_name = resolve_unsloth_safetensors_model(gen.model)
         use_4bit = gen.load_in_4bit and _cuda_usable()
         if gen.load_in_4bit and not _cuda_usable():
             print(
@@ -222,7 +242,7 @@ class UnslothQwenProposer:
                 flush=True,
             )
         kwargs = dict(
-            model_name=gen.model,
+            model_name=model_name,
             max_seq_length=2048,
             load_in_4bit=use_4bit,
             fast_inference=False,
@@ -279,6 +299,8 @@ class UnslothQwenProposer:
                     max_new_tokens=gen.max_new_tokens,
                     do_sample=True,
                     temperature=self.config.em_hsd_v2.generation_temperature,
+                    top_p=gen.top_p,
+                    top_k=gen.top_k,
                     pad_token_id=tokenizer.eos_token_id,
                 )
             new_tokens = generated[0][inputs["input_ids"].shape[1]:]
@@ -289,16 +311,125 @@ class UnslothQwenProposer:
         return out
 
 
+class LlamaServerProposer:
+    """Paraphrase via llama-server OpenAI API (Unsloth GGUF path).
+
+    Start the server first, e.g. ``scripts/start_llama_server.sh``.
+    See ``resources/qwen-run-loclay.md`` § EM-HSD integration.
+    """
+
+    def __init__(self, config: EmHsdConfig):
+        self.config = config
+        self._rng: Optional[np.random.Generator] = None
+        self._protected: List[str] = []
+        self._client = None
+        self._model_id: str = ""
+
+    def _load(self):
+        if self._client is not None:
+            return
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            raise ImportError(
+                "llama_cpp backend requires openai: pip install openai"
+            ) from exc
+
+        gen = self.config.generation
+        self._client = OpenAI(
+            base_url=gen.llama_server_url,
+            api_key=gen.llama_server_api_key,
+        )
+        self._model_id = llama_server_model_id(gen.model, gen.llama_model_alias)
+        try:
+            models = self._client.models.list()
+            ids = [m.id for m in models.data]
+            if ids and self._model_id not in ids:
+                print(
+                    f"WARN: llama-server model {self._model_id!r} not in {ids}; "
+                    f"using first available: {ids[0]!r}",
+                    flush=True,
+                )
+                self._model_id = ids[0]
+        except Exception as exc:
+            raise RuntimeError(
+                f"llama-server not reachable at {gen.llama_server_url}: {exc}. "
+                "Start it with: em-hsd-v2/scripts/start_llama_server.sh"
+            ) from exc
+
+    def bind(self, rng: np.random.Generator, protected_terms: Sequence[str]) -> None:
+        self._rng = rng
+        self._protected = list(protected_terms)
+
+    def propose(self, text: str, k: int) -> List[str]:
+        if self._rng is None:
+            raise RuntimeError("LlamaServerProposer.bind() must be called before propose()")
+        self._load()
+        gen = self.config.generation
+        em = self.config.em_hsd_v2
+        protected_list = ", ".join(self._protected) if self._protected else "(none)"
+        prompt = _PARAPHRASE_PROMPT.format(protected_list=protected_list, text=text)
+        messages = [{"role": "user", "content": prompt}]
+
+        extra_body = {
+            "top_k": gen.top_k,
+            "min_p": gen.min_p,
+            "repetition_penalty": gen.repetition_penalty,
+        }
+        if gen.enable_thinking:
+            extra_body["chat_template_kwargs"] = {"enable_thinking": True}
+
+        out: List[str] = []
+        seen = set()
+        attempts = 0
+        max_attempts = k * 3
+        while len(out) < k and attempts < max_attempts:
+            attempts += 1
+            try:
+                response = self._client.chat.completions.create(
+                    model=self._model_id,
+                    messages=messages,
+                    temperature=em.generation_temperature,
+                    top_p=gen.top_p,
+                    presence_penalty=gen.presence_penalty,
+                    max_tokens=gen.max_new_tokens,
+                    extra_body=extra_body,
+                )
+            except Exception as exc:
+                raise RuntimeError(f"llama-server completion failed: {exc}") from exc
+            cand = (response.choices[0].message.content or "").strip()
+            if cand and cand not in seen:
+                seen.add(cand)
+                out.append(cand)
+        return out
+
+
 def make_proposer(config: EmHsdConfig) -> GenerativeProposer:
     backend = config.generation.backend
+    if backend == "llama_cpp":
+        if not is_gguf_repo(config.generation.model):
+            print(
+                f"WARN: generation.backend=llama_cpp but model "
+                f"{config.generation.model!r} is not a *-GGUF repo.",
+                flush=True,
+            )
+        return LlamaServerProposer(config)
     if backend == "unsloth":
+        if is_gguf_repo(config.generation.model) and not config.generation.unsloth_model.strip():
+            print(
+                f"WARN: loading safetensors {resolve_unsloth_safetensors_model(config.generation.model)!r} "
+                f"for GGUF config {config.generation.model!r}; "
+                "prefer backend: llama_cpp for GGUF per Unsloth docs.",
+                flush=True,
+            )
         return UnslothQwenProposer(config)
     if backend == "transformers":
         return TransformersQwenProposer(config)
     if backend == "mock":
         return MockProposer(config)
     raise ValueError(
-        f"unknown generation.backend {backend!r} (expected mock|unsloth|transformers)"
+        f"unknown generation.backend {backend!r} "
+        "(expected mock|llama_cpp|unsloth|transformers)"
     )
 
 

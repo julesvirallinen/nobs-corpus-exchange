@@ -31,7 +31,7 @@ pip install \
   "trl==0.24.0" \
   "peft==0.18.1" \
   "bitsandbytes==0.49.1"
-pip install sentence-transformers safetensors huggingface_hub regex pyyaml numpy scikit-learn pytest
+pip install sentence-transformers safetensors huggingface_hub regex pyyaml numpy scikit-learn pytest openai
 
 echo "==> Re-pin torch cu118 (unsloth may upgrade torch to cu128)"
 pip install \
@@ -56,29 +56,15 @@ import unsloth  # noqa: F401
 print("unsloth ok")
 PY
 
-echo "==> Pre-download Qwen3.5-0.8B-GGUF"
-python - <<'PY'
-import torch
-from unsloth import FastLanguageModel
-use_4bit = False
-if torch.cuda.is_available():
-    torch.zeros(1, device="cuda")
-    use_4bit = True
-model, tok = FastLanguageModel.from_pretrained(
-    model_name="unsloth/Qwen3.5-0.8B-GGUF",
-    max_seq_length=2048,
-    load_in_4bit=use_4bit,
-    fast_inference=False,
-)
-FastLanguageModel.for_inference(model)
-# VL tokenizer: positional args are images
-out = tok(text="Hello", return_tensors="pt")
-print("Qwen3.5-0.8B-GGUF loaded OK (4bit=" + str(use_4bit) + ", tokens=" + str(out["input_ids"].shape) + ")")
-PY
+echo "==> Download Qwen3.5-0.8B-GGUF (llama.cpp; see resources/qwen-run-loclay.md)"
+python "${ROOT}/scripts/download_qwen_gguf.py" || true
 
 echo ""
 echo "Done. Activate with:"
 echo "  conda activate ${ENV_NAME}"
 echo ""
-echo "Smoke test (or use existing lum env):"
-echo "  cd ${ROOT} && PYTHONPATH=src python scripts/test_qwen.py --config configs/em-hsd-v2-qwen35-08b.yaml"
+echo "1) Start llama-server (terminal 1):"
+echo "  cd ${ROOT} && bash scripts/start_llama_server.sh"
+echo ""
+echo "2) Smoke test (terminal 2):"
+echo "  cd ${ROOT} && pip install openai && PYTHONPATH=src python scripts/test_qwen.py --config configs/em-hsd-v2-qwen35-08b.yaml"

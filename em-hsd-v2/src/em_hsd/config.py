@@ -49,10 +49,30 @@ class EmHsdV2Settings:
 
 @dataclass
 class GenerationSettings:
+    """Paraphrase backend settings.
+
+    Unsloth GGUF repos (``*-GGUF``) must use ``backend: llama_cpp`` with
+    ``llama-server`` per Unsloth docs. ``backend: unsloth`` loads safetensors
+    via ``FastLanguageModel`` (e.g. ``Qwen/Qwen3.5-0.8B``).
+    """
+
     backend: str = "mock"
     model: str = "unsloth/Qwen3.5-0.8B-GGUF"
     load_in_4bit: bool = True
     max_new_tokens: int = 256
+    # llama.cpp / Unsloth GGUF (instruct non-thinking, general tasks — §86–115)
+    quant: str = "UD-Q4_K_XL"
+    top_p: float = 0.8
+    top_k: int = 20
+    min_p: float = 0.0
+    presence_penalty: float = 1.5
+    repetition_penalty: float = 1.0
+    enable_thinking: bool = False
+    llama_server_url: str = "http://127.0.0.1:8001/v1"
+    llama_server_api_key: str = "sk-no-key-required"
+    llama_model_alias: str = ""
+    # FastLanguageModel safetensors override when backend=unsloth
+    unsloth_model: str = ""
 
 
 @dataclass
@@ -118,6 +138,17 @@ def _parse_generation(d: dict) -> GenerationSettings:
         model=str(gen.get("model", "unsloth/Qwen3.5-0.8B-GGUF")),
         load_in_4bit=bool(gen.get("load_in_4bit", True)),
         max_new_tokens=int(gen.get("max_new_tokens", 256)),
+        quant=str(gen.get("quant", "UD-Q4_K_XL")),
+        top_p=float(gen.get("top_p", 0.8)),
+        top_k=int(gen.get("top_k", 20)),
+        min_p=float(gen.get("min_p", 0.0)),
+        presence_penalty=float(gen.get("presence_penalty", 1.5)),
+        repetition_penalty=float(gen.get("repetition_penalty", 1.0)),
+        enable_thinking=bool(gen.get("enable_thinking", False)),
+        llama_server_url=str(gen.get("llama_server_url", "http://127.0.0.1:8001/v1")),
+        llama_server_api_key=str(gen.get("llama_server_api_key", "sk-no-key-required")),
+        llama_model_alias=str(gen.get("llama_model_alias", "")),
+        unsloth_model=str(gen.get("unsloth_model", "")),
     )
 
 

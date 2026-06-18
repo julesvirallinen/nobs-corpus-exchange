@@ -22,6 +22,7 @@ hf = [
 ]
 emhsd = [
     "unsloth",
+    "openai",
 ]
 test = [
     "pytest",
