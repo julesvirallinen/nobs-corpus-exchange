@@ -387,7 +387,7 @@ function dismissRows(ids){ ids.forEach(id=>{const r=S.rows.find(x=>x.id===id); i
 //// ---------------------------------------------------------------- render
 function renderPostIt(){
   const el=$("postit");
-  if(!S.rows.length){ el.innerHTML=""; return; }
+  if(!S.rows.length || S.step !== "overview"){ el.innerHTML=""; return; }
   const items = S.rows.map(r=>`<li>${esc(r.original)}</li>`).join("");
   el.innerHTML=`<div class="postit"><div class="postit-title">original sentences</div><ol>${items}</ol></div>`;
 }
