@@ -23,6 +23,10 @@ hf = [
 emhsd = [
     "unsloth",
 ]
+serve = [
+    "fastapi",
+    "uvicorn",
+]
 test = [
     "pytest",
 ]
@@ -35,9 +39,13 @@ dev = [
 [project.scripts]
 em-hsd-run = "em_hsd.cli.run:main"
 triage-dp-run = "em_hsd.cli.run:triage_dp_main"
+em-hsd-serve = "em_hsd_serve:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"em_hsd.server" = ["static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
