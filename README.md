@@ -2,7 +2,7 @@
 
 
 clickable demo: http://136.114.94.183:8000 (pre-calculated LLM processing, live demo will be with real processing) 
-
+[backup clickable demo](https://nobs-corpus-exchange.netlify.app/)
 
 
 https://github.com/user-attachments/assets/e04ba134-6ca2-488c-accc-bdb789c655dc
