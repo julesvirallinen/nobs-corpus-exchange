@@ -107,9 +107,18 @@ def filter_candidates(
             batch.details.append(FilterResult(cand, False, "length", p_hate))
             continue
 
+        if em.max_length_tokens > 0 and len(cand.strip().split()) > em.max_length_tokens:
+            batch.details.append(FilterResult(cand, False, "length", p_hate))
+            continue
+
         sem_cos = float(cosine(original, cand))
         if sem_cos < em.tau_sem_min:
             batch.details.append(FilterResult(cand, False, "semantic", p_hate, sem_cos))
+            continue
+
+        edit_ratio = normalized_edit_ratio(original, cand)
+        if edit_ratio < em.min_edit_ratio:
+            batch.details.append(FilterResult(cand, False, "edit_ratio", p_hate, sem_cos))
             continue
 
         batch.valid.append(cand)

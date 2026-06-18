@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +18,7 @@ from em_hsd.utility_scorer import ProxyHateScorer, _score_from_logits
 
 ROOT = Path(__file__).resolve().parents[1]
 TEST_CONFIG = str(ROOT / "configs" / "em-hsd-v2-test.yaml")
+REAL_CONFIG = str(ROOT / "configs" / "em-hsd-v2-real.yaml")
 
 
 def test_full_pipeline_returns_non_empty(cfg):
@@ -27,7 +29,7 @@ def test_full_pipeline_returns_non_empty(cfg):
     assert isinstance(out, str) and out.strip()
     assert audit["mode"] == "em-hsd-v2"
     assert audit["epsilon_1"] == audit["epsilon_2"]
-    assert audit["utility_backend"] == "proxy"
+    assert audit["utility_backend"] in ("proxy", "hf")
     assert "P_hate_original" in audit
     assert "P_hate_x_priv" in audit
 
@@ -93,7 +95,7 @@ def test_em_hsd_does_not_import_harness():
 def test_load_config(cfg):
     assert cfg.generation.backend == "mock"
     assert cfg.em_hsd_v2.k_generate == 4
-    assert cfg.utility.backend == "proxy"
+    assert cfg.utility.backend in ("proxy", "hf")
     assert cfg.utility.model == "unitary/unbiased-toxic-roberta"
     assert cfg.utility.score_label == "toxicity"
 
@@ -102,6 +104,57 @@ def test_production_config_utility_hf():
     prod = load_em_hsd_config(str(ROOT / "configs" / "em-hsd-v2.yaml"))
     assert prod.utility.backend == "hf"
     assert prod.utility.model == "unitary/unbiased-toxic-roberta"
+
+
+def test_real_config_uses_transformers_and_hf_embedding():
+    real = load_em_hsd_config(REAL_CONFIG)
+    assert real.generation.backend == "transformers"
+    assert real.embedding.backend == "hf"
+    assert real.utility.backend == "hf"
+
+
+def test_real_config_blocked_when_downloads_disabled():
+    real = load_em_hsd_config(REAL_CONFIG)
+    real.spine.rng = make_row_rng(0, run_seed="real")
+    with pytest.raises(RuntimeError):
+        privatize_em_hsd_v2(
+            "Stop being such a dummy and read the instructions before you ask.", real,
+        )
+
+
+def _model_is_cached(model_id: str) -> bool:
+    try:
+        from huggingface_hub import scan_cache_dir
+    except ImportError:
+        return False
+    for repo in scan_cache_dir().repos:
+        if repo.repo_id == model_id:
+            return True
+    return False
+
+
+@pytest.mark.skipif(
+    os.environ.get("EM_HSD_ALLOW_DOWNLOADS", "") != "1",
+    reason="Real-backend smoke test requires EM_HSD_ALLOW_DOWNLOADS=1",
+)
+@pytest.mark.skipif(
+    not _model_is_cached("Qwen/Qwen2.5-0.5B-Instruct"),
+    reason="Qwen2.5-0.5B-Instruct not found in local HuggingFace cache",
+)
+def test_real_backend_smoke_runs_with_cached_model():
+    from em_hsd.core.policy import DownloadPolicy
+
+    assert DownloadPolicy.is_allowed()
+    real = load_em_hsd_config(REAL_CONFIG)
+    real.spine.rng = make_row_rng(0, run_seed="real")
+    out, audit = privatize_em_hsd_v2(
+        "Stop being such a dummy and read the instructions before you ask.", real,
+    )
+    assert isinstance(out, str) and out.strip()
+    assert audit["mode"] == "em-hsd-v2"
+    assert audit["utility_backend"] == "hf"
+    assert "P_hate_original" in audit
+    assert "P_hate_x_priv" in audit
 
 
 def test_multilabel_score_from_logits():

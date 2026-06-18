@@ -2,19 +2,17 @@
 
 from __future__ import annotations
 
+import typing
 from typing import Any
 
 from em_hsd.core.config import EmHsdConfig
 from em_hsd.core.dp_select import select_rewrite
-from em_hsd.core.embedding import get_encoder
-from em_hsd.core.resources import protected_canonicals
+from em_hsd.core.resources import ResourceManager, protected_canonicals
 from em_hsd.core.sanitize import token_sanitize
 from em_hsd.core.sensitivity import selection_sensitivity
 from em_hsd.interfaces.triage import TokenRoute
 from em_hsd.layer4.filter import filter_candidates
-from em_hsd.layer4.proposer import get_proposer
 from em_hsd.layer4.prune import prune_candidates
-from em_hsd.layer4.scorer import get_scorer
 
 
 class Layer4Orchestrator:
@@ -96,10 +94,13 @@ class Layer4Orchestrator:
             "filter_details": [],
         }
 
-        proposer = get_proposer(config)
+        from em_hsd.layer4.proposer import GenerativeProposer
+        resources = ResourceManager(config)
+        proposer = resources.proposer()
+        proposer = typing.cast(GenerativeProposer, proposer)
         proposer.bind(config.spine.rng, canonicals)
-        scorer = get_scorer(config)
-        encoder = get_encoder(config)
+        scorer = resources.scorer()
+        encoder = resources.encoder()
         score = getattr(scorer, "score")
         p_orig = float(score(text))
         p_x_priv = float(score(x_priv))

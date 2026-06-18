@@ -54,25 +54,27 @@ class ResourceManager:
         from em_hsd.layer4.scorer import make_scorer
         if self.config.utility.backend == "hf":
             self._guard_download("load hate utility model from Hugging Face")
-        self._scorer = make_scorer(self.config)
+        self._scorer = make_scorer(self.config, allow_downloads=self.allow_downloads)
         return self._scorer
 
     def encoder(self) -> object:
         if self._encoder is not None:
             return self._encoder
         from em_hsd.core.embedding import make_encoder
-        if self.config.embedding.backend in ("hf", "auto"):
+        # 'hf' requests a real model explicitly; 'auto' lets make_encoder fall back
+        # to SimpleEncoder when downloads are disabled.
+        if self.config.embedding.backend == "hf":
             self._guard_download("load sentence transformer model")
-        self._encoder = make_encoder(self.config.embedding)
+        self._encoder = make_encoder(self.config.embedding, allow_downloads=self.allow_downloads)
         return self._encoder
 
-    def proposer(self) -> object:
+    def proposer(self) -> "GenerativeProposer":
         if self._proposer is not None:
             return self._proposer
-        from em_hsd.layer4.proposer import make_proposer
+        from em_hsd.layer4.proposer import GenerativeProposer, make_proposer
         if self.config.generation.backend in ("unsloth", "transformers"):
             self._guard_download(f"load generative model ({self.config.generation.backend})")
-        self._proposer = make_proposer(self.config)
+        self._proposer = make_proposer(self.config, allow_downloads=self.allow_downloads)
         return self._proposer
 
     def mlm_backend(self) -> object:

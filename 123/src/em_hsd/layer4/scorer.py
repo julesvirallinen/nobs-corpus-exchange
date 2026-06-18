@@ -112,9 +112,13 @@ def _skeleton(token: str) -> str:
     return "".join(out)
 
 
-def make_scorer(config: EmHsdConfig) -> object:
+def make_scorer(config: EmHsdConfig, *, allow_downloads: bool = True) -> object:
     util = config.utility
     if util.backend == "hf":
+        if not allow_downloads:
+            raise RuntimeError(
+                "Downloads are disabled; cannot load HuggingFace toxicity model."
+            )
         return HFToxicityScorer(util.model, score_label=util.score_label)
     terms: list[str] = []
     lex = config.spine.lexicon
@@ -124,10 +128,5 @@ def make_scorer(config: EmHsdConfig) -> object:
 
 
 def get_scorer(config: EmHsdConfig) -> object:
-    key = f"_scorer_{config.utility.backend}_{config.utility.model}"
-    cached = getattr(config, key, None)
-    if cached is not None:
-        return cached
-    scorer = make_scorer(config)
-    setattr(config, key, scorer)
-    return scorer
+    from em_hsd.core.resources import ResourceManager
+    return ResourceManager(config).scorer()

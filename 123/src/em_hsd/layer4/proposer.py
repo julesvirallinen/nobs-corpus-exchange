@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 import numpy as np
 
 from em_hsd.core.config import EmHsdConfig
+from em_hsd.core.resources import ResourceManager
 
 _PARAPHRASE_PROMPT = """Rewrite the post below with different wording and style.
 Rules:
@@ -42,6 +43,7 @@ def _cuda_usable() -> bool:
         return False
 
 
+@runtime_checkable
 class GenerativeProposer(Protocol):
     def bind(self, rng: np.random.Generator, protected_terms: Sequence[str]) -> None:
         ...
@@ -288,8 +290,13 @@ class UnslothQwenProposer:
         return out
 
 
-def make_proposer(config: EmHsdConfig) -> GenerativeProposer:
+def make_proposer(config: EmHsdConfig, *, allow_downloads: bool = True) -> GenerativeProposer:
     backend = config.generation.backend
+    if backend in ("unsloth", "transformers"):
+        if not allow_downloads:
+            raise RuntimeError(
+                f"Downloads are disabled; cannot load generative model ({backend})."
+            )
     if backend == "unsloth":
         return UnslothQwenProposer(config)
     if backend == "transformers":
@@ -302,9 +309,7 @@ def make_proposer(config: EmHsdConfig) -> GenerativeProposer:
 
 
 def get_proposer(config: EmHsdConfig) -> GenerativeProposer:
-    cached = getattr(config, "_proposer", None)
-    if cached is not None:
-        return cached
-    proposer = make_proposer(config)
-    object.__setattr__(config, "_proposer", proposer)
-    return proposer
+    return ResourceManager(config).proposer()
+
+
+from em_hsd.core.resources import ResourceManager

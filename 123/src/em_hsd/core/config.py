@@ -28,6 +28,7 @@ class EmHsdV2Settings:
     utility_alpha: float = 1.0
     delta_u: float = 0.5
     min_length_tokens: int = 3
+    max_length_tokens: int = 0
 
     @property
     def epsilon_1(self) -> float:
@@ -106,6 +107,7 @@ def _parse_em_settings(d: dict) -> EmHsdV2Settings:
         hate_floor_delta=float(em.get("hate_floor_delta", 0.05)),
         tau_sem_min=float(em.get("tau_sem_min", 0.55)),
         min_edit_ratio=float(em.get("min_edit_ratio", 0.08)),
+        max_length_tokens=int(em.get("max_length_tokens", 0)),
         clip=float(em.get("clip", 5.0)),
         use_refined_delta_u=bool(em.get("use_refined_delta_u", True)),
         utility_alpha=float(em.get("utility_alpha", 1.0)),

@@ -72,13 +72,19 @@ class SentenceTransformerEncoder:
         return float(np.dot(va, vb) / denom)
 
 
-def make_encoder(settings: EmbeddingSettings) -> object:
+def make_encoder(settings: EmbeddingSettings, *, allow_downloads: bool = True) -> object:
     backend = settings.backend
     if backend == "simple":
         return SimpleEncoder()
     if backend == "hf":
+        if not allow_downloads:
+            raise RuntimeError(
+                "Downloads are disabled; cannot load SentenceTransformer model."
+            )
         return SentenceTransformerEncoder(settings.model)
     # auto
+    if not allow_downloads:
+        return SimpleEncoder()
     try:
         return SentenceTransformerEncoder(settings.model)
     except Exception:
@@ -86,9 +92,5 @@ def make_encoder(settings: EmbeddingSettings) -> object:
 
 
 def get_encoder(config: EmHsdConfig) -> object:
-    cached = getattr(config, "_encoder", None)
-    if cached is not None:
-        return cached
-    enc = make_encoder(config.embedding)
-    object.__setattr__(config, "_encoder", enc)
-    return enc
+    from em_hsd.core.resources import ResourceManager
+    return ResourceManager(config).encoder()
