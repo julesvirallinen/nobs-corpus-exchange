@@ -172,16 +172,20 @@ def _derive_row(
     original: str,
     audit: dict[str, Any],
     clf: dict[str, Any] | None = None,
+    selected: str | None = None,
 ) -> ProcessedRow:
     """Build the review record from the DP audit, optionally overlaying the
     multi-label classifier's flagged/severity/category/confidence labels.
 
-    The DP pipeline always supplies the anonymised ``x_priv`` and privacy
-    budget. When *clf* is given (``classifier='hf'``) its labels drive the
-    review fields; otherwise they are derived from the proxy ``P_hate``.
+    *selected* is the published privatised output (the chosen paraphrase under
+    the exponential mechanism); it is the text shown in the review table. The
+    audit's ``x_priv`` is only the intermediate token-sanitised string and
+    falls back here when no candidate was selected. When *clf* is given
+    (``classifier='hf'``) its labels drive the review fields; otherwise they
+    are derived from the proxy ``P_hate``.
     """
     proxy_p = audit.get("P_hate_original")
-    x_priv = str(audit.get("x_priv", ""))
+    x_priv = selected if selected is not None else str(audit.get("x_priv", ""))
     changed = _tokens_changed(original, x_priv)
 
     if clf is not None:
@@ -357,7 +361,7 @@ def create_app() -> FastAPI:
                 records.append(_derive_row(idx, text, {"x_priv": "", "P_hate_original": 0.0}))
                 continue
             try:
-                _, audit = _privatize(stripped, str(config_path), idx, run_seed)
+                selected, audit = _privatize(stripped, str(config_path), idx, run_seed)
             except Exception as exc:  # surface pipeline errors as 500 with detail
                 raise HTTPException(
                     status_code=500, detail=f"pipeline error on row {idx}: {exc}"
@@ -367,7 +371,7 @@ def create_app() -> FastAPI:
                 from em_hsd.server.classifier import classifier as _clf
 
                 clf = _clf.classify(stripped)
-            records.append(_derive_row(idx, text, audit, clf))
+            records.append(_derive_row(idx, text, audit, clf, selected))
 
         flagged = [r for r in records if r.flagged]
         severity_hist = {
