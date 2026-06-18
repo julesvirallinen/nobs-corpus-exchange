@@ -1,8 +1,8 @@
 # NoBS · Corpus Exchange
 
-Upload election posts. The pipeline anonymises them on your device before anything is shared.
 
-## Steps
+## Anonymization algorithm
+
 
 1. **Triage** — identify tokens that carry author identity
 2. **Score** — RoBERTa flags hate-speech and assigns category + severity
