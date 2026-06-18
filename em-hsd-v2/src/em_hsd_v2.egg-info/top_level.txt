@@ -1,2 +1,0 @@
-em_hsd
-em_hsd_cli

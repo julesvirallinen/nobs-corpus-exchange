@@ -2,6 +2,9 @@ models/
 .venv/
 __pycache__/
 *.pyc
+*.pyo
 .DS_Store
+*.egg-info/
 Johnny t0-1.03/unsloth_compiled_cache/
-em-hsd-v2/unsloth_compiled_cache/
+123/.sisyphus/
+.cursor/
