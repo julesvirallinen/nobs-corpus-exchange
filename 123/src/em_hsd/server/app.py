@@ -112,11 +112,11 @@ class ProcessRequest(BaseModel):
     )
     run_seed: str = Field(default="corpus", description="Run-level seed label.")
     classifier: str = Field(
-        default="proxy",
+        default="hf",
         description=(
-            "Labelling source: 'proxy' (lexicon-derived, no downloads — default) "
-            "or 'hf' (unitary/unbiased-toxic-roberta multi-label, real category + "
-            "severity). 'hf' falls back to proxy if the model is unavailable."
+            "Labelling source: 'hf' (unitary/unbiased-toxic-roberta multi-label, "
+            "real category + severity — default) or 'proxy' (lexicon-derived fallback). "
+            "'hf' falls back to proxy if the model is unavailable."
         ),
     )
 
