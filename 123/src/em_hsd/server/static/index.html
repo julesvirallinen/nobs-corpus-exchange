@@ -247,14 +247,16 @@ async function runProcessing(){
   try{
     const resp = await fetch("/api/process",{
       method:"POST", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({rows, privatization_level:S.privLevel}),
+      body:JSON.stringify({rows, privatization_level:S.privLevel, classifier:"hf"}),
     });
     if(!resp.ok){ throw new Error((await resp.json()).detail || resp.statusText); }
     const data = await resp.json();
     S.result = data;
-    S.rows = data.rows.map(r=>({...r, cat:null, validated:false, dismissed:false}));
+    // cat starts as the model-assigned target group; reclassified flags a human override.
+    S.rows = data.rows.map(r=>({...r, cat:r.category||null, modelCat:r.category||null, reclassified:false, validated:false, dismissed:false}));
     S.proc="done"; S.step="overview";
-    toast(`Processed ${fmt(data.count)} messages on-device · ${fmt(data.flagged)} flagged`);
+    const via = data.classifier==="hf" ? "unbiased-toxic-roberta" : "lexicon proxy";
+    toast(`Processed ${fmt(data.count)} messages · ${fmt(data.flagged)} flagged · labelled by ${via}`);
   }catch(e){
     S.proc="idle";
     toast("Processing failed: "+e.message);
@@ -279,7 +281,7 @@ function visibleRows(){
   return rows;
 }
 function validatedCount(){ return S.rows.filter(r=>r.validated&&!r.dismissed).length; }
-function reclassifiedCount(){ return S.rows.filter(r=>r.cat).length; }
+function reclassifiedCount(){ return S.rows.filter(r=>r.reclassified).length; }
 
 //// ---------------------------------------------------------------- actions
 function go(tab){ S.tab=tab; S.expanded=null; render(); }
@@ -296,7 +298,7 @@ function closePicker(){ S.picker=null; render(); }
 function applyPick(value){
   const {mode,ids}=S.picker;
   ids.forEach(id=>{ const r=S.rows.find(x=>x.id===id); if(!r) return;
-    if(mode==="reclassify"){ r.cat=value; r.validated=true; }
+    if(mode==="reclassify"){ r.cat=value; r.reclassified=true; r.validated=true; }
     else if(mode==="severity"){ r.severity=value; }
   });
   const n=ids.length;
@@ -366,7 +368,7 @@ function stepUpload(){
   const procSteps=[
     {label:"Strip personal identifiers (PII)", meta:"names, handles, emails"},
     {label:"Normalise dialect & spelling", meta:"slang, elongation"},
-    {label:"Label & score hate categories", meta:"on-device model"},
+    {label:"Label & score hate categories", meta:"unbiased-toxic-roberta"},
     {label:"Cluster near-duplicates", meta:"k-anonymity floor"},
     {label:"Apply differential privacy", meta:"ε per message"},
   ];
@@ -431,20 +433,28 @@ function stepUpload(){
 
 function stepOverview(){
   const r=S.result; if(!r) return `<div class="wrap"><p class="lede">No corpus processed yet.</p></div>`;
+  // Category breakdown (target group) from the real classifier.
+  const ch=r.category_hist||{};
+  const catBars=CATS.map(c=>({label:c.label,color:c.color,n:ch[c.id]||0}))
+    .concat([{label:"Unattributed",color:"#b5bac6",n:ch["unassigned"]||0}])
+    .filter(b=>b.n>0).sort((a,b)=>b.n-a.n);
+  const useCat = catBars.length>0;
   const sevBars=[
     {label:"High severity",color:SEVS.high,n:r.severity_hist.high},
     {label:"Medium severity",color:SEVS.medium,n:r.severity_hist.medium},
     {label:"Low severity",color:SEVS.low,n:r.severity_hist.low},
   ];
-  const maxn=Math.max(1,...sevBars.map(b=>b.n));
-  const bars=sevBars.map(b=>`<div style="display:flex;align-items:center;gap:13px;margin-bottom:11px;">
-      <span style="width:140px;flex:none;font-size:13px;display:inline-flex;align-items:center;gap:8px;"><span class="cdot" style="background:${b.color}"></span>${b.label}</span>
+  const showBars = useCat?catBars:sevBars;
+  const maxn=Math.max(1,...showBars.map(b=>b.n));
+  const bars=showBars.map(b=>`<div style="display:flex;align-items:center;gap:13px;margin-bottom:11px;">
+      <span style="width:170px;flex:none;font-size:13px;display:inline-flex;align-items:center;gap:8px;"><span class="cdot" style="background:${b.color}"></span>${b.label}</span>
       <div style="flex:1;height:16px;background:#eef1f6;border-radius:3px;overflow:hidden;"><div style="height:100%;width:${Math.round(100*b.n/maxn)}%;background:${b.color};border-radius:3px;"></div></div>
       <span class="mono" style="width:60px;text-align:right;font-size:12px;color:var(--muted)">${fmt(b.n)}</span>
     </div>`).join("");
+  const via = r.classifier==="hf" ? "unbiased-toxic-roberta (multi-label)" : "lexicon proxy";
   return `<div class="wrap" style="max-width:1120px;">
     <h2 class="title">Processed corpus — the whole picture</h2>
-    <p class="lede">${fmt(r.count)} messages processed on-device with the “${esc(PRIV[r.privatization_level].name)}” privatisation profile. Here's what the model labelled before you validate.</p>
+    <p class="lede">${fmt(r.count)} messages processed on-device with the “${esc(PRIV[r.privatization_level].name)}” privatisation profile, labelled by <b>${via}</b>. Here's what the model labelled before you validate.</p>
     <div style="display:flex;gap:12px;margin-bottom:20px;">
       <div class="stat"><div class="k">MESSAGES</div><div class="v">${fmt(r.count)}</div></div>
       <div class="stat"><div class="k">FLAGGED</div><div class="v">${fmt(r.flagged)} <span style="font-size:13px;color:var(--faint);font-weight:600;">· ${r.flagged_pct}%</span></div></div>
@@ -452,7 +462,7 @@ function stepOverview(){
       <div class="stat" style="border-color:var(--warn-border);background:var(--warn-bg);"><div class="k" style="color:var(--warn)">LOW-CONFIDENCE</div><div class="v" style="color:var(--warn)">${fmt(r.low_confidence)}</div></div>
     </div>
     <div class="card" style="padding:18px 20px;margin-bottom:18px;">
-      <div class="label" style="margin-bottom:15px;">FLAGGED BY SEVERITY · MODEL-ASSIGNED, BEFORE VALIDATION</div>
+      <div class="label" style="margin-bottom:15px;">FLAGGED BY ${useCat?"TARGET GROUP":"SEVERITY"} · MODEL-ASSIGNED, BEFORE VALIDATION</div>
       ${bars}
     </div>
     <div style="display:flex;gap:14px;align-items:center;border:1px solid var(--accent-border);background:var(--accent-soft);border-radius:11px;padding:15px 18px;">
