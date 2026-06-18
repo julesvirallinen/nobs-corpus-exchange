@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EM-HSD v2 — DP Text Sanitisation Demo</title>
+  <style>
+    :root {
+      --bg: #0f1117; --panel: #181b23; --panel2: #1f232d; --border: #2a2f3a;
+      --text: #e6e8ee; --muted: #9aa3b2; --accent: #6ea8fe; --good: #4ade80;
+      --warn: #fbbf24; --bad: #f87171; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      line-height: 1.5;
+    }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 32px 20px 80px; }
+    h1 { font-size: 1.5rem; margin: 0 0 4px; }
+    .sub { color: var(--muted); margin: 0 0 24px; font-size: 0.92rem; }
+    label { display: block; font-size: 0.82rem; color: var(--muted); margin: 0 0 6px; }
+    textarea, select, input {
+      width: 100%; background: var(--panel2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+      font-size: 0.95rem; font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 80px; }
+    .row { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+    .row > div { flex: 1; min-width: 140px; }
+    button {
+      margin-top: 16px; background: var(--accent); color: #0b1020; border: none;
+      border-radius: 8px; padding: 11px 20px; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+      padding: 18px 20px; margin-top: 22px;
+    }
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    .field .k { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+    .field .v { font-size: 1.02rem; margin-top: 2px; }
+    .v.mono { font-family: var(--mono); font-size: 0.92rem; }
+    .selected { color: var(--good); font-weight: 600; }
+    .pill {
+      display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .pill.ok { background: rgba(74,222,128,0.15); color: var(--good); }
+    .pill.fb { background: rgba(251,191,36,0.15); color: var(--warn); }
+    .stats { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 4px; }
+    .stat .n { font-size: 1.15rem; font-weight: 700; }
+    .stat .l { font-size: 0.74rem; color: var(--muted); }
+    .cand { padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; margin-top: 8px; font-family: var(--mono); font-size: 0.88rem; }
+    .cand.sel { border-color: var(--good); background: rgba(74,222,128,0.06); }
+    .cand .score { color: var(--muted); float: right; }
+    details { margin-top: 18px; }
+    summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; }
+    pre { background: #0b0d12; border: 1px solid var(--border); border-radius: 8px; padding: 14px; overflow: auto; font-size: 0.8rem; max-height: 360px; }
+    .err { color: var(--bad); }
+    .hint { color: var(--muted); font-size: 0.78rem; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>EM-HSD v2 — DP Text Sanitisation</h1>
+    <p class="sub">Differential-privacy paraphrasing of hate-adjacent text. Enter a sentence; the pipeline sanitises tokens, generates candidate paraphrases, and selects one under the exponential mechanism.</p>
+
+    <div class="card">
+      <label for="text">Input text</label>
+      <textarea id="text" placeholder="you are a complete dummy">you are a complete dummy</textarea>
+      <div class="row">
+        <div>
+          <label for="config">Config</label>
+          <select id="config"></select>
+        </div>
+        <div>
+          <label for="seed">Seed</label>
+          <input id="seed" type="number" value="0" />
+        </div>
+      </div>
+      <button id="go">Privatise</button>
+      <div class="hint" id="backend-hint"></div>
+    </div>
+
+    <div id="out"></div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const API = ""; // same origin
+
+    async function loadConfigs() {
+      try {
+        const r = await fetch(API + "/api/configs");
+        const data = await r.json();
+        const sel = $("config");
+        sel.innerHTML = "";
+        for (const c of data.configs) {
+          const opt = document.createElement("option");
+          opt.value = c; opt.textContent = c;
+          if (c === data.default) opt.selected = true;
+          sel.appendChild(opt);
+        }
+        $("backend-hint").textContent =
+          "Default config uses mock generation + proxy scorer (no model downloads).";
+      } catch (e) {
+        $("backend-hint").innerHTML =
+          '<span class="err">Could not reach API. Is the server running?</span>';
+      }
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    }
+
+    function pct(x) {
+      return x == null ? "—" : (x * 100).toFixed(1) + "%";
+    }
+
+    function render(d) {
+      const fb = d.fallback
+        ? `<span class="pill fb">fallback · ${esc(d.fallback_reason)}</span>`
+        : `<span class="pill ok">LLM candidate selected</span>`;
+      const cands = (d.candidates || []).map((c) =>
+        `<div class="cand ${c.selected ? "sel" : ""}"><span class="score">score ${c.score.toFixed(3)}</span>${c.selected ? "★ " : ""}${esc(c.text)}</div>`
+      ).join("") || '<div class="hint">No candidates (returned x_priv baseline).</div>';
+
+      $("out").innerHTML = `
+        <div class="card">
+          <div class="field"><div class="k">Original</div><div class="v mono">${esc(d.original)}</div></div>
+          <div class="field"><div class="k">Token-sanitised (x_priv)</div><div class="v mono">${esc(d.x_priv)}</div></div>
+          <div class="field"><div class="k">Selected output</div><div class="v mono selected">${esc(d.selected)}</div></div>
+          <div class="field">${fb}</div>
+          <div class="stats">
+            <div class="stat"><div class="n">${d.k_generated}</div><div class="l">generated</div></div>
+            <div class="stat"><div class="n">${d.k_valid}</div><div class="l">valid</div></div>
+            <div class="stat"><div class="n">${pct(d.p_hate_original)}</div><div class="l">P(hate) original</div></div>
+            <div class="stat"><div class="n">${pct(d.p_hate_x_priv)}</div><div class="l">P(hate) x_priv</div></div>
+            <div class="stat"><div class="n">${d.epsilon_total ?? "—"}</div><div class="l">ε total</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="k" style="margin-bottom:6px;color:var(--muted);font-size:0.74rem;text-transform:uppercase;letter-spacing:0.04em;">Candidates</div>
+          ${cands}
+          <details><summary>Raw audit JSON</summary><pre>${esc(JSON.stringify(d.audit, null, 2))}</pre></details>
+        </div>`;
+    }
+
+    async function privatize() {
+      const btn = $("go");
+      btn.disabled = true; btn.textContent = "Privatising…";
+      $("out").innerHTML = "";
+      try {
+        const r = await fetch(API + "/api/privatize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: $("text").value,
+            config: $("config").value,
+            seed: parseInt($("seed").value || "0", 10),
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          $("out").innerHTML = `<div class="card err">Error ${r.status}: ${esc(data.detail || "unknown")}</div>`;
+        } else {
+          render(data);
+        }
+      } catch (e) {
+        $("out").innerHTML = `<div class="card err">Request failed: ${esc(e.message)}</div>`;
+      } finally {
+        btn.disabled = false; btn.textContent = "Privatise";
+      }
+    }
+
+    $("go").addEventListener("click", privatize);
+    $("text").addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") privatize();
+    });
+    loadConfigs();
+  </script>
+</body>
+</html>
