@@ -3,6 +3,11 @@ scikit-learn
 pyyaml
 regex
 
+[dev]
+ruff
+mypy
+pytest
+
 [emhsd]
 unsloth
 
@@ -10,6 +15,10 @@ unsloth
 torch
 transformers
 sentence-transformers
+
+[serve]
+fastapi
+uvicorn
 
 [test]
 pytest

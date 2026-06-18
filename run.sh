@@ -40,7 +40,7 @@ PYTHON="$VENV/bin/python"
 # ── Dependencies ────────────────────────────────────────────────────────────
 echo "==> Installing / updating dependencies..."
 "$PIP" install --quiet --upgrade pip
-"$PIP" install --quiet -e "$REPO/123[serve]"
+"$PIP" install --quiet -e "$REPO/123[serve,hf]"
 
 # ── Launch ──────────────────────────────────────────────────────────────────
 echo ""

@@ -1,2 +1,4 @@
 [console_scripts]
-em-hsd-run = em_hsd_cli.run:main
+em-hsd-run = em_hsd.cli.run:main
+em-hsd-serve = em_hsd_serve:main
+triage-dp-run = em_hsd.cli.run:triage_dp_main

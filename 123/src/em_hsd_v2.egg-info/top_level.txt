@@ -1,2 +1,4 @@
 em_hsd
 em_hsd_cli
+em_hsd_serve
+triage_dp
