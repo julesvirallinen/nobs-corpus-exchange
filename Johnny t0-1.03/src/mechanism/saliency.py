@@ -14,6 +14,7 @@ behaviour is used.
 
 from __future__ import annotations
 
+import threading
 from typing import List, Optional
 
 from .config import Config
@@ -21,6 +22,10 @@ from .tokenize import PROTECTED, WORD, Segment
 from .canonicalize import canonicalize_protected
 
 _HATE_KEYS = ("hate", "offensive", "abusive", "toxic", "hateful", "label_1")
+
+# Process-level cache so the same checkpoint is not loaded twice.
+_oc_lock = threading.Lock()
+_oc_cache: dict = {}  # model_name -> OcclusionSaliency
 
 
 class OcclusionSaliency:
@@ -51,13 +56,23 @@ class OcclusionSaliency:
         return float(sum(probs[i] for i in self.hate_ids))
 
 
+def _get_occlusion_saliency(model_name: str) -> "OcclusionSaliency":
+    """Return a cached OcclusionSaliency, loading once per model_name."""
+    if model_name in _oc_cache:
+        return _oc_cache[model_name]
+    with _oc_lock:
+        if model_name not in _oc_cache:
+            _oc_cache[model_name] = OcclusionSaliency(model_name)
+    return _oc_cache[model_name]
+
+
 def apply_saliency(segments: List[Segment], config: Config) -> Optional[str]:
     """Mark salient content tokens as protected-in-place. Returns a warning
     string on failure (and leaves segments unchanged), else None."""
     if not config.saliency.enabled:
         return None
     try:
-        scorer = OcclusionSaliency(config.saliency.model)
+        scorer = _get_occlusion_saliency(config.saliency.model)
     except Exception as exc:  # pragma: no cover - depends on optional HF extra
         return f"saliency disabled: could not load {config.saliency.model!r}: {exc}"
 

@@ -24,10 +24,15 @@ Both return RAW (unclipped) logits; clipping happens in dp.py.
 from __future__ import annotations
 
 import hashlib
+import threading
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
+
+# Process-level cache: SentenceTransformer instances keyed by model name.
+_st_lock = threading.Lock()
+_st_cache: dict = {}
 
 # A small, deliberately neutral vocabulary for the deterministic backend.
 _HASH_VOCAB = [
@@ -134,9 +139,13 @@ class EmbeddingMLM:
     def _load_encoder(self):
         if self._encoder is not None:
             return
-        from sentence_transformers import SentenceTransformer
-
-        self._encoder = SentenceTransformer(self.embedding_model)
+        model_name = self.embedding_model
+        if model_name not in _st_cache:
+            with _st_lock:
+                if model_name not in _st_cache:
+                    from sentence_transformers import SentenceTransformer
+                    _st_cache[model_name] = SentenceTransformer(model_name)
+        self._encoder = _st_cache[model_name]
         vecs = self._encoder.encode(
             self.candidate_vocab,
             convert_to_numpy=True,
