@@ -40,14 +40,12 @@ class HFToxicityScorer:
 
     def __init__(self, model_name: str, score_label: str = "toxicity"):
         import torch
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+        from em_hsd.core.model_cache import get_sequence_classifier
 
         self._torch = torch
         self.name = model_name
         self._score_label = score_label
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
-        self.model.eval()
+        self.tokenizer, self.model = get_sequence_classifier(model_name)
 
     def score(self, text: str) -> float:
         if not (text or "").strip():

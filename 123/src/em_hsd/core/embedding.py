@@ -13,8 +13,8 @@ class SentenceTransformerEncoder:
     name = "hf"
 
     def __init__(self, model_name: str):
-        from sentence_transformers import SentenceTransformer
-        self._model = SentenceTransformer(model_name)
+        from em_hsd.core.model_cache import get_sentence_transformer
+        self._model = get_sentence_transformer(model_name)
 
     def encode(self, texts: Sequence[str] | np.ndarray) -> np.ndarray:
         if isinstance(texts, np.ndarray):

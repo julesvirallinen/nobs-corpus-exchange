@@ -72,17 +72,10 @@ class ToxicRobertaClassifier:
                 return True
             try:
                 import torch
-                from transformers import (
-                    AutoModelForSequenceClassification,
-                    AutoTokenizer,
-                )
+                from em_hsd.core.model_cache import get_sequence_classifier
 
                 self._torch = torch
-                self._tok = AutoTokenizer.from_pretrained(self.model_id)
-                self._model = AutoModelForSequenceClassification.from_pretrained(
-                    self.model_id
-                )
-                self._model.eval()
+                self._tok, self._model = get_sequence_classifier(self.model_id)
                 self._id2label = {
                     int(k): str(v) for k, v in self._model.config.id2label.items()
                 }
