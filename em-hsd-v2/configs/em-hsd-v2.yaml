@@ -2,11 +2,13 @@
 # Lexicon: run Johnny t0-1.03/scripts/setup_lexicons.py once before first use.
 
 mlm:
-  backend: hf
+  backend: embedding
   model: distilroberta-base
-  top_k: 48
-  clip: 5.0
+  top_k: 32
+  clip: 1.0
   include_original: true
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+  candidate_vocab: ../Johnny t0-1.03/data/vocab/epsilon1_candidates.txt
 
 epsilon:
   protected: skip
@@ -70,7 +72,10 @@ generation:
   repetition_penalty: 1.0
   enable_thinking: false
   llama_server_url: http://127.0.0.1:8001/v1
+  prompt_profile: auto
+  hate_p_threshold: 0.35
+  prompt_jitter: true
 
 embedding:
   model: sentence-transformers/all-MiniLM-L6-v2
-  backend: auto
+  backend: hf

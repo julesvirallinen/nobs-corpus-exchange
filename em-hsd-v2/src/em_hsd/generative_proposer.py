@@ -7,21 +7,37 @@ from typing import List, Optional, Protocol, Sequence
 import numpy as np
 
 from .config import EmHsdConfig
+from .prompts import build_paraphrase_prompt, n_jitter_variants, resolve_prompt_profile
 from .qwen_models import (
     is_gguf_repo,
     llama_server_model_id,
     resolve_unsloth_safetensors_model,
 )
 
-_PARAPHRASE_PROMPT = """Rewrite the post below with different wording and style.
-Rules:
-- KEEP these terms unchanged in meaning: {protected_list}
-- Do not remove insults or soften offensive content
-- Change distinctive phrasing, openers, and stylistic tics
-- Similar length (±25%)
-Output only the rewritten post.
 
-Post: {text}"""
+def _sample_paraphrase_prompt(
+    config: EmHsdConfig,
+    protected_terms: Sequence[str],
+    text: str,
+    rng: np.random.Generator,
+    p_hate_original: float | None,
+    variants_used: List[int],
+) -> tuple[str, str]:
+    profile = resolve_prompt_profile(config, p_hate_original)
+    n_var = n_jitter_variants(profile)
+    if config.generation.prompt_jitter:
+        variant_idx = int(rng.integers(n_var))
+    else:
+        variant_idx = 0
+    variants_used.append(variant_idx)
+    prompt = build_paraphrase_prompt(
+        config,
+        protected_terms,
+        text,
+        profile=profile,
+        variant_idx=variant_idx,
+    )
+    return prompt, profile
 
 
 def _tokenize_prompt(tokenizer, formatted: str, device):
@@ -71,10 +87,22 @@ class MockProposer:
         self.config = config
         self._rng: Optional[np.random.Generator] = None
         self._protected: List[str] = []
+        self._p_hate_original: float | None = None
+        self.last_prompt_profile: str | None = None
+        self.last_prompt_variants: List[int] = []
 
-    def bind(self, rng: np.random.Generator, protected_terms: Sequence[str]) -> None:
+    def bind(
+        self,
+        rng: np.random.Generator,
+        protected_terms: Sequence[str],
+        *,
+        p_hate_original: float | None = None,
+    ) -> None:
         self._rng = rng
         self._protected = list(protected_terms)
+        self._p_hate_original = p_hate_original
+        self.last_prompt_profile = None
+        self.last_prompt_variants: List[int] = []
 
     def propose(self, text: str, k: int) -> List[str]:
         if self._rng is None:
@@ -104,6 +132,9 @@ class TransformersQwenProposer:
         self.config = config
         self._rng: Optional[np.random.Generator] = None
         self._protected: List[str] = []
+        self._p_hate_original: float | None = None
+        self.last_prompt_profile: str | None = None
+        self.last_prompt_variants: List[int] = []
         self._model = None
         self._tokenizer = None
 
@@ -159,26 +190,27 @@ class TransformersQwenProposer:
             ).to("cpu")
         self._model.eval()
 
-    def bind(self, rng: np.random.Generator, protected_terms: Sequence[str]) -> None:
+    def bind(
+        self,
+        rng: np.random.Generator,
+        protected_terms: Sequence[str],
+        *,
+        p_hate_original: float | None = None,
+    ) -> None:
         self._rng = rng
         self._protected = list(protected_terms)
+        self._p_hate_original = p_hate_original
+        self.last_prompt_profile = None
+        self.last_prompt_variants: List[int] = []
 
     def propose(self, text: str, k: int) -> List[str]:
         if self._rng is None:
             raise RuntimeError("TransformersQwenProposer.bind() must be called before propose()")
         self._load()
         gen = self.config.generation
-        protected_list = ", ".join(self._protected) if self._protected else "(none)"
-        prompt = _PARAPHRASE_PROMPT.format(protected_list=protected_list, text=text)
-        messages = [{"role": "user", "content": prompt}]
         tokenizer = self._tokenizer
         model = self._model
-
         apply_template = getattr(tokenizer, "apply_chat_template", None)
-        if apply_template:
-            formatted = apply_template(messages, tokenize=False, add_generation_prompt=True)
-        else:
-            formatted = prompt
 
         import torch
 
@@ -187,8 +219,23 @@ class TransformersQwenProposer:
         seen = set()
         attempts = 0
         max_attempts = k * 3
+        variants_used: List[int] = []
         while len(out) < k and attempts < max_attempts:
             attempts += 1
+            prompt, profile = _sample_paraphrase_prompt(
+                self.config,
+                self._protected,
+                text,
+                self._rng,
+                self._p_hate_original,
+                variants_used,
+            )
+            self.last_prompt_profile = profile
+            messages = [{"role": "user", "content": prompt}]
+            if apply_template:
+                formatted = apply_template(messages, tokenize=False, add_generation_prompt=True)
+            else:
+                formatted = prompt
             seed = int(self._rng.integers(2**31))
             torch.manual_seed(seed)
             inputs = _tokenize_prompt(tokenizer, formatted, device)
@@ -207,6 +254,7 @@ class TransformersQwenProposer:
             if cand and cand not in seen:
                 seen.add(cand)
                 out.append(cand)
+        self.last_prompt_variants = variants_used
         return out
 
 
@@ -217,6 +265,9 @@ class UnslothQwenProposer:
         self.config = config
         self._rng: Optional[np.random.Generator] = None
         self._protected: List[str] = []
+        self._p_hate_original: float | None = None
+        self.last_prompt_profile: str | None = None
+        self.last_prompt_variants: List[int] = []
         self._model = None
         self._tokenizer = None
 
@@ -261,26 +312,27 @@ class UnslothQwenProposer:
                 raise
         FastLanguageModel.for_inference(self._model)
 
-    def bind(self, rng: np.random.Generator, protected_terms: Sequence[str]) -> None:
+    def bind(
+        self,
+        rng: np.random.Generator,
+        protected_terms: Sequence[str],
+        *,
+        p_hate_original: float | None = None,
+    ) -> None:
         self._rng = rng
         self._protected = list(protected_terms)
+        self._p_hate_original = p_hate_original
+        self.last_prompt_profile = None
+        self.last_prompt_variants: List[int] = []
 
     def propose(self, text: str, k: int) -> List[str]:
         if self._rng is None:
             raise RuntimeError("UnslothQwenProposer.bind() must be called before propose()")
         self._load()
         gen = self.config.generation
-        protected_list = ", ".join(self._protected) if self._protected else "(none)"
-        prompt = _PARAPHRASE_PROMPT.format(protected_list=protected_list, text=text)
-        messages = [{"role": "user", "content": prompt}]
         tokenizer = self._tokenizer
         model = self._model
-
         apply_template = getattr(tokenizer, "apply_chat_template", None)
-        if apply_template:
-            formatted = apply_template(messages, tokenize=False, add_generation_prompt=True)
-        else:
-            formatted = prompt
 
         import torch
 
@@ -288,8 +340,23 @@ class UnslothQwenProposer:
         seen = set()
         attempts = 0
         max_attempts = k * 3
+        variants_used: List[int] = []
         while len(out) < k and attempts < max_attempts:
             attempts += 1
+            prompt, profile = _sample_paraphrase_prompt(
+                self.config,
+                self._protected,
+                text,
+                self._rng,
+                self._p_hate_original,
+                variants_used,
+            )
+            self.last_prompt_profile = profile
+            messages = [{"role": "user", "content": prompt}]
+            if apply_template:
+                formatted = apply_template(messages, tokenize=False, add_generation_prompt=True)
+            else:
+                formatted = prompt
             seed = int(self._rng.integers(2**31))
             torch.manual_seed(seed)
             inputs = _tokenize_prompt(tokenizer, formatted, model.device)
@@ -308,6 +375,7 @@ class UnslothQwenProposer:
             if cand and cand not in seen:
                 seen.add(cand)
                 out.append(cand)
+        self.last_prompt_variants = variants_used
         return out
 
 
@@ -322,6 +390,9 @@ class LlamaServerProposer:
         self.config = config
         self._rng: Optional[np.random.Generator] = None
         self._protected: List[str] = []
+        self._p_hate_original: float | None = None
+        self.last_prompt_profile: str | None = None
+        self.last_prompt_variants: List[int] = []
         self._client = None
         self._model_id: str = ""
 
@@ -357,9 +428,18 @@ class LlamaServerProposer:
                 "Start it with: em-hsd-v2/scripts/start_llama_server.sh"
             ) from exc
 
-    def bind(self, rng: np.random.Generator, protected_terms: Sequence[str]) -> None:
+    def bind(
+        self,
+        rng: np.random.Generator,
+        protected_terms: Sequence[str],
+        *,
+        p_hate_original: float | None = None,
+    ) -> None:
         self._rng = rng
         self._protected = list(protected_terms)
+        self._p_hate_original = p_hate_original
+        self.last_prompt_profile = None
+        self.last_prompt_variants: List[int] = []
 
     def propose(self, text: str, k: int) -> List[str]:
         if self._rng is None:
@@ -367,9 +447,6 @@ class LlamaServerProposer:
         self._load()
         gen = self.config.generation
         em = self.config.em_hsd_v2
-        protected_list = ", ".join(self._protected) if self._protected else "(none)"
-        prompt = _PARAPHRASE_PROMPT.format(protected_list=protected_list, text=text)
-        messages = [{"role": "user", "content": prompt}]
 
         extra_body = {
             "top_k": gen.top_k,
@@ -383,8 +460,19 @@ class LlamaServerProposer:
         seen = set()
         attempts = 0
         max_attempts = k * 3
+        variants_used: List[int] = []
         while len(out) < k and attempts < max_attempts:
             attempts += 1
+            prompt, profile = _sample_paraphrase_prompt(
+                self.config,
+                self._protected,
+                text,
+                self._rng,
+                self._p_hate_original,
+                variants_used,
+            )
+            self.last_prompt_profile = profile
+            messages = [{"role": "user", "content": prompt}]
             try:
                 response = self._client.chat.completions.create(
                     model=self._model_id,
@@ -405,6 +493,7 @@ class LlamaServerProposer:
             if cand and cand not in seen:
                 seen.add(cand)
                 out.append(cand)
+        self.last_prompt_variants = variants_used
         return out
 
 

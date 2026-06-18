@@ -114,6 +114,8 @@ def test_production_config_llama_cpp():
     assert prod.generation.model == "unsloth/Qwen3.5-0.8B-GGUF"
     assert prod.generation.quant == "UD-Q4_K_XL"
     assert prod.generation.enable_thinking is False
+    assert prod.spine.mlm.backend == "embedding"
+    assert prod.embedding.backend == "hf"
 
 
 def test_multilabel_analyze_from_logits():

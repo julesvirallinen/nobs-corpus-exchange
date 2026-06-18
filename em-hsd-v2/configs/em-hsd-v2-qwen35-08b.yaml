@@ -2,11 +2,13 @@
 # Use with conda env: em-hsd-qwen  (see scripts/setup_conda_env.sh)
 
 mlm:
-  backend: hf
+  backend: embedding
   model: distilroberta-base
-  top_k: 48
-  clip: 5.0
+  top_k: 32
+  clip: 1.0
   include_original: true
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+  candidate_vocab: ../Johnny t0-1.03/data/vocab/epsilon1_candidates.txt
 
 epsilon:
   protected: skip
@@ -46,9 +48,10 @@ em_hsd_v2:
   deployment_mode: standalone
   epsilon_total: 18.0
   epsilon_split: 0.5
-  k_generate: 2
-  k_max_after_prune: 2
+  k_generate: 6
+  k_max_after_prune: 4
   tau_dup: 0.80
+  token_sanitize_top_m: 32
   generation_temperature: 0.8
   hate_floor_delta: 0.10
   tau_sem_min: 0.45
@@ -65,6 +68,10 @@ generation:
   top_k: 20
   enable_thinking: false
   llama_server_url: http://127.0.0.1:8001/v1
+  prompt_profile: auto
+  hate_p_threshold: 0.35
+  prompt_jitter: true
 
 embedding:
-  backend: simple
+  model: sentence-transformers/all-MiniLM-L6-v2
+  backend: hf

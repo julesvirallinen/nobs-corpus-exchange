@@ -37,11 +37,14 @@ def _parse_epsilon(value: Union[str, float, int, None]) -> EpsilonValue:
 
 @dataclass
 class MLMConfig:
-    backend: str = "hash"            # "hf" | "hash"
+    backend: str = "hash"            # "hf" | "hash" | "embedding"
     model: str = "distilroberta-base"
     top_k: int = 48
     clip: float = 5.0                # logit clip magnitude C; scores in [-C, C]
     include_original: bool = True
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    candidate_vocab: str = "data/vocab/epsilon1_candidates.txt"
+    hybrid_hf: bool = False          # union HF MLM candidates into embedding pool
 
 
 @dataclass
@@ -126,6 +129,13 @@ def config_from_dict(d: dict) -> Config:
             top_k=int(mlm.get("top_k", 48)),
             clip=float(mlm.get("clip", 5.0)),
             include_original=bool(mlm.get("include_original", True)),
+            embedding_model=str(
+                mlm.get("embedding_model", "sentence-transformers/all-MiniLM-L6-v2")
+            ),
+            candidate_vocab=str(
+                mlm.get("candidate_vocab", "data/vocab/epsilon1_candidates.txt")
+            ),
+            hybrid_hf=bool(mlm.get("hybrid_hf", False)),
         ),
         epsilon=EpsilonConfig(
             protected=_parse_epsilon(eps.get("protected", "skip")),

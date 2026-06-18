@@ -2,11 +2,13 @@
 # Input: T′ (token-sanitized). Call privatize_em_hsd_v2(T_prime, cfg, original_text=x).
 
 mlm:
-  backend: hf
+  backend: embedding
   model: distilroberta-base
-  top_k: 48
-  clip: 5.0
+  top_k: 32
+  clip: 1.0
   include_original: true
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+  candidate_vocab: ../Johnny t0-1.03/data/vocab/epsilon1_candidates.txt
 
 epsilon:
   protected: skip
@@ -48,7 +50,7 @@ em_hsd_v2:
   deployment_mode: composed
   epsilon_total: 9.0
   epsilon_split: 1.0
-  k_generate: 4
+  k_generate: 6
   k_max_after_prune: 4
   tau_dup: 0.80
   token_sanitize_top_m: 32
@@ -65,7 +67,10 @@ generation:
   model: unsloth/Qwen3.5-0.8B-GGUF
   load_in_4bit: true
   max_new_tokens: 256
+  prompt_profile: auto
+  hate_p_threshold: 0.35
+  prompt_jitter: true
 
 embedding:
   model: sentence-transformers/all-MiniLM-L6-v2
-  backend: simple
+  backend: auto

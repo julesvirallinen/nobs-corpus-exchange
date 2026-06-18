@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .config import EmHsdConfig
-from .constraints import filter_candidates, protected_skeletons
+from .constraints import filter_candidates
 from .dp_select import select_rewrite
 from .generative_proposer import get_proposer
 from .prune_candidates import prune_candidates
-from .resources import protected_canonicals
+from .resources import merge_protected_terms, protected_canonicals, protected_from_token_log
 from .sensitivity import selection_sensitivity
 from .token_sanitize import token_sanitize
 from .utility_scorer import get_scorer
@@ -51,10 +51,16 @@ def privatize_em_hsd_v2(
             token_log = list(upstream_token_log) + list(token_log)
 
     if protected_spans is not None:
-        canonicals = sorted({c for c in protected_spans if c and str(c).strip()})
-        skels = protected_skeletons(canonicals)
+        lex_canon = sorted({c for c in protected_spans if c and str(c).strip()})
     else:
-        canonicals, skels = protected_canonicals(reference, config)
+        lex_canon, _ = protected_canonicals(reference, config)
+
+    sal_canon = protected_from_token_log(token_log)
+    canonicals, skels = merge_protected_terms(lex_canon, sal_canon)
+
+    scorer = get_scorer(config)
+    hsd_orig = scorer.analyze(reference)
+    hsd_x_priv = scorer.analyze(x_priv)
 
     audit: Dict[str, Any] = {
         "mode": "em-hsd-v2",
@@ -68,6 +74,8 @@ def privatize_em_hsd_v2(
         "x_priv": x_priv,
         "reference_text": reference[:500] if reference != text else None,
         "protected_terms": canonicals,
+        "protected_terms_lexicon": lex_canon,
+        "protected_terms_saliency": sal_canon,
         "token_log": token_log,
         "fallback": False,
         "fallback_reason": "",
@@ -79,10 +87,7 @@ def privatize_em_hsd_v2(
     }
 
     proposer = get_proposer(config)
-    proposer.bind(config.spine.rng, canonicals)
-    scorer = get_scorer(config)
-    hsd_orig = scorer.analyze(reference)
-    hsd_x_priv = scorer.analyze(x_priv)
+    proposer.bind(config.spine.rng, canonicals, p_hate_original=hsd_orig.p_hate)
     audit["P_hate_original"] = hsd_orig.p_hate
     audit["P_hate_x_priv"] = hsd_x_priv.p_hate
     audit["hsd_original"] = hsd_orig.to_dict()
@@ -100,6 +105,9 @@ def privatize_em_hsd_v2(
         audit["fallback_reason"] = f"proposer_error:{exc}"
         audit["hsd_output"] = hsd_x_priv.to_dict()
         return x_priv, audit
+
+    audit["prompt_profile"] = getattr(proposer, "last_prompt_profile", None)
+    audit["prompt_variants_used"] = getattr(proposer, "last_prompt_variants", [])
 
     audit["k_generated"] = len(raw_candidates)
     pruned = prune_candidates(raw_candidates, config)

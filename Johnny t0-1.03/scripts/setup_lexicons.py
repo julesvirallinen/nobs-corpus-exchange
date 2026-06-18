@@ -37,6 +37,14 @@ IA_HSD_SUPPLEMENT = (
     "imbecile", "dimwit", "dumbass", "jackass", "bastard", "bitch",
 )
 
+# Terms common in Reddit HSD dev (data/reddit_25_TKDeVb4.csv) but absent from LDNOOBW.
+REDDIT_HSD_SUPPLEMENT = (
+    "retarded", "retard", "stupider", "fuckwit", "fuckwits", "misandrist",
+    "misandry", "cuck", "cucks", "spastic", "hoe", "hoes", "dickhead",
+    "dickheads", "bullshit", "fuckwit", "gunt", "cunts", "fuckers",
+    "fuckface", "shithead", "shitheads", "douchebag", "douchebags",
+)
+
 
 def _write_terms(terms, dest=DEST):
     os.makedirs(os.path.dirname(dest), exist_ok=True)
@@ -64,6 +72,8 @@ def main(argv=None) -> int:
                    help="use a local file instead of downloading")
     p.add_argument("--no-ia-hsd-supplement", action="store_true",
                    help="do not merge IA-HSD eval insult terms (dummy, idiot, …)")
+    p.add_argument("--no-reddit-hsd-supplement", action="store_true",
+                   help="do not merge Reddit HSD dev insult terms (retarded, fuckwit, …)")
     args = p.parse_args(argv)
 
     if args.from_file:
@@ -87,6 +97,9 @@ def main(argv=None) -> int:
     if not args.no_ia_hsd_supplement:
         terms.extend(IA_HSD_SUPPLEMENT)
         print(f"merging {len(IA_HSD_SUPPLEMENT)} IA-HSD supplement terms")
+    if not args.no_reddit_hsd_supplement:
+        terms.extend(REDDIT_HSD_SUPPLEMENT)
+        print(f"merging {len(REDDIT_HSD_SUPPLEMENT)} Reddit HSD supplement terms")
     _write_terms(terms)
     return 0
 

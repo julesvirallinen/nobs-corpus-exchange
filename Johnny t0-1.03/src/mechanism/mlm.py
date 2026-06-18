@@ -14,13 +14,18 @@ come from; only the *source* differs:
   no semantic quality; it exists for the test suite, plumbing, and the offline
   verify.sh fallback. Never ship a submission produced with the hash backend.
 
+* ``EmbeddingMLM`` -- PrivRewrite-style ε₁ backend: exponential mechanism over
+  top-M embedding cosine neighbors (bounded utility in [0, 1]). Requires
+  sentence-transformers for the embedding model.
+
 Both return RAW (unclipped) logits; clipping happens in dp.py.
 """
 
 from __future__ import annotations
 
 import hashlib
-from typing import List, Sequence, Tuple
+from pathlib import Path
+from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -71,6 +76,139 @@ class HashMLM:
         if include_original and original not in cands:
             cands.append(original)
             scores.append(self._logit(ctx, original))
+        return cands, np.asarray(scores, dtype=np.float64)
+
+
+def _resolve_vocab_path(path: str) -> Path:
+    p = Path(path)
+    if p.is_file():
+        return p
+    root = Path(__file__).resolve().parents[2]  # Johnny t0-1.03/
+    candidate = root / path
+    if candidate.is_file():
+        return candidate
+    raise FileNotFoundError(f"embedding candidate vocab not found: {path!r}")
+
+
+def _load_candidate_vocab(path: str) -> List[str]:
+    vocab_path = _resolve_vocab_path(path)
+    words: List[str] = []
+    seen = set()
+    for line in vocab_path.read_text(encoding="utf-8").splitlines():
+        w = line.strip().lower()
+        if not w or w.startswith("#") or not w.isalpha():
+            continue
+        if w not in seen:
+            seen.add(w)
+            words.append(w)
+    if not words:
+        raise ValueError(f"empty candidate vocab: {vocab_path}")
+    return words
+
+
+def _utility_from_cosine(cos: float) -> float:
+    """Map cosine similarity to bounded utility u in [0, 1] (PrivRewrite §4.1.1)."""
+    return float(max(0.0, min(1.0, (cos + 1.0) / 2.0)))
+
+
+class EmbeddingMLM:
+    """ε₁ backend: top-M cosine neighbors in public embedding space."""
+
+    name = "embedding"
+
+    def __init__(
+        self,
+        embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
+        candidate_vocab: str = "data/vocab/epsilon1_candidates.txt",
+        hybrid_hf: bool = False,
+        hf_model: str = "distilroberta-base",
+    ):
+        self.embedding_model = embedding_model
+        self.candidate_vocab = list(_load_candidate_vocab(candidate_vocab))
+        self.hybrid_hf = bool(hybrid_hf)
+        self.hf_model = hf_model
+        self._encoder = None
+        self._vocab_matrix: Optional[np.ndarray] = None
+        self._hf_backend: Optional[HFMaskedLM] = None
+
+    def _load_encoder(self):
+        if self._encoder is not None:
+            return
+        from sentence_transformers import SentenceTransformer
+
+        self._encoder = SentenceTransformer(self.embedding_model)
+        vecs = self._encoder.encode(
+            self.candidate_vocab,
+            convert_to_numpy=True,
+            show_progress_bar=False,
+        )
+        vecs = np.asarray(vecs, dtype=np.float64)
+        norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+        norms = np.where(norms > 0, norms, 1.0)
+        self._vocab_matrix = vecs / norms
+
+    def _encode_word(self, word: str) -> np.ndarray:
+        self._load_encoder()
+        vec = self._encoder.encode(
+            [word],
+            convert_to_numpy=True,
+            show_progress_bar=False,
+        )[0]
+        vec = np.asarray(vec, dtype=np.float64)
+        norm = np.linalg.norm(vec)
+        if norm <= 0:
+            return vec
+        return vec / norm
+
+    def _hybrid_candidates(
+        self, left: str, right: str, original: str, top_k: int,
+    ) -> List[str]:
+        if not self.hybrid_hf:
+            return []
+        if self._hf_backend is None:
+            try:
+                self._hf_backend = HFMaskedLM(self.hf_model)
+            except Exception:
+                return []
+        cands, _ = self._hf_backend.score(
+            left, right, original, top_k=min(32, top_k), include_original=False,
+        )
+        return list(cands)
+
+    def score(self, left: str, right: str, original: str, top_k: int,
+              include_original: bool) -> Tuple[List[str], np.ndarray]:
+        self._load_encoder()
+        orig = (original or "").strip().lower()
+        if not orig:
+            return [original], np.asarray([1.0], dtype=np.float64)
+
+        pool = list(self.candidate_vocab)
+        for w in self._hybrid_candidates(left, right, orig, top_k):
+            low = w.lower()
+            if low not in pool:
+                pool.append(low)
+
+        orig_vec = self._encode_word(orig)
+        matrix = self._vocab_matrix
+        idx_map = {w: i for i, w in enumerate(self.candidate_vocab)}
+        scored: List[Tuple[str, float]] = []
+        for w in pool:
+            if w in idx_map:
+                cos = float(np.dot(orig_vec, matrix[idx_map[w]]))
+            else:
+                cos = float(np.dot(orig_vec, self._encode_word(w)))
+            scored.append((w, _utility_from_cosine(cos)))
+
+        scored.sort(key=lambda x: x[1], reverse=True)
+        top = scored[: max(1, top_k)]
+        cands = [w for w, _ in top]
+        scores = [s for _, s in top]
+        if include_original and orig not in cands:
+            cos = float(np.dot(orig_vec, orig_vec))
+            cands.append(orig)
+            scores.append(_utility_from_cosine(cos))
+        if not cands:
+            return [orig], np.asarray([1.0], dtype=np.float64)
         return cands, np.asarray(scores, dtype=np.float64)
 
 
@@ -150,4 +288,13 @@ def make_backend(cfg):
         return HashMLM()
     if backend == "hf":
         return HFMaskedLM(cfg.mlm.model)
-    raise ValueError(f"Unknown mlm.backend {backend!r} (expected 'hf' or 'hash')")
+    if backend == "embedding":
+        return EmbeddingMLM(
+            embedding_model=cfg.mlm.embedding_model,
+            candidate_vocab=cfg.mlm.candidate_vocab,
+            hybrid_hf=cfg.mlm.hybrid_hf,
+            hf_model=cfg.mlm.model,
+        )
+    raise ValueError(
+        f"Unknown mlm.backend {backend!r} (expected 'hf', 'hash', or 'embedding')"
+    )

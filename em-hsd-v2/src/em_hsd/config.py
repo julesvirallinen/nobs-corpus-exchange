@@ -73,6 +73,9 @@ class GenerationSettings:
     llama_model_alias: str = ""
     # FastLanguageModel safetensors override when backend=unsloth
     unsloth_model: str = ""
+    prompt_profile: str = "auto"
+    hate_p_threshold: float = 0.35
+    prompt_jitter: bool = True
 
 
 @dataclass
@@ -149,6 +152,9 @@ def _parse_generation(d: dict) -> GenerationSettings:
         llama_server_api_key=str(gen.get("llama_server_api_key", "sk-no-key-required")),
         llama_model_alias=str(gen.get("llama_model_alias", "")),
         unsloth_model=str(gen.get("unsloth_model", "")),
+        prompt_profile=str(gen.get("prompt_profile", "auto")),
+        hate_p_threshold=float(gen.get("hate_p_threshold", 0.35)),
+        prompt_jitter=bool(gen.get("prompt_jitter", True)),
     )
 
 
@@ -187,6 +193,24 @@ def load_em_hsd_config(path: str) -> EmHsdConfig:
             johnny = cfg_path.parent.parent / "Johnny t0-1.03" / "data" / "lexicons" / "hate_terms.txt"
             if johnny.is_file():
                 spine.lexicon.path = str(johnny)
+    # Resolve embedding candidate vocab relative to config / Johnny tree.
+    cv_path = Path(spine.mlm.candidate_vocab)
+    if not cv_path.is_file():
+        for base in (cfg_path.parent, cfg_path.parent.parent):
+            candidate = (base / spine.mlm.candidate_vocab).resolve()
+            if candidate.is_file():
+                spine.mlm.candidate_vocab = str(candidate)
+                break
+        else:
+            johnny_vocab = (
+                cfg_path.parent.parent
+                / "Johnny t0-1.03"
+                / "data"
+                / "vocab"
+                / "epsilon1_candidates.txt"
+            )
+            if johnny_vocab.is_file():
+                spine.mlm.candidate_vocab = str(johnny_vocab)
     return EmHsdConfig(
         spine=spine,
         em_hsd_v2=_parse_em_settings(data),
