@@ -52,6 +52,12 @@ def main(argv: list[str] | None = None) -> int:
     # Mocks have been removed — every config uses real models, so always permit
     # loading them (from the HF cache; set HF_HUB_OFFLINE=1 to forbid network).
     os.environ.setdefault("EM_HSD_ALLOW_DOWNLOADS", "1")
+
+    hf_token = os.environ.get("HF_TOKEN")
+    if hf_token:
+        from huggingface_hub import login
+        login(token=hf_token, add_to_git_credential=False)
+
     if args.config:
         os.environ["EM_HSD_DEFAULT_CONFIG"] = args.config
 

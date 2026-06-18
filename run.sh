@@ -57,4 +57,5 @@ fi
 
 export EM_HSD_SPINE_PATH="$SPINE_DIR"
 export EM_HSD_ALLOW_DOWNLOADS=1
+[[ -n "${HF_TOKEN:-}" ]] && export HF_TOKEN
 exec "$VENV/bin/em-hsd-serve" --host "$HOST" --port "$PORT"

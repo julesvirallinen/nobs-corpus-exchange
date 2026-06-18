@@ -129,7 +129,10 @@ class Layer4Orchestrator:
         encoder = resources.encoder()
 
         try:
-            raw_candidates = proposer.propose(x_priv, em.k_generate)
+            # Paraphrase the ORIGINAL text (Layer-1 protected tokens are kept by
+            # the proposer), not the ε₁-sanitised x_priv — so candidates are
+            # legible, faithful sentences rather than paraphrases of token-salad.
+            raw_candidates = proposer.propose(text, em.k_generate)
         except Exception as exc:
             audit["fallback"] = True
             audit["fallback_reason"] = f"proposer_error:{exc}"
@@ -174,8 +177,18 @@ class Layer4Orchestrator:
             audit["selection_probs"] = [1.0]
             return valid[0], audit
 
+        # No candidate cleared every gate. Prefer the most semantically faithful
+        # generated paraphrase (a legible sentence) over the token-sanitised
+        # x_priv (which reads as word-salad).
         audit["fallback"] = True
-        audit["fallback_reason"] = "no_valid_candidates"
+        if batch.details:
+            best = max(batch.details, key=lambda d: d.sem_cos)
+            audit["fallback_reason"] = "no_valid_candidates_best_effort"
+            audit["candidates"] = [
+                {"text": best.candidate[:200], "score": best.sem_cos, "selected": True}
+            ]
+            return best.candidate, audit
+        audit["fallback_reason"] = "no_candidates"
         return x_priv, audit
 
 
