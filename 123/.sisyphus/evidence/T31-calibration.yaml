@@ -1,0 +1,106 @@
+summary:
+  best_theta: &id001
+    epsilon_total: 12.300648865190226
+    hate_floor_delta: 0.37790210207861197
+    tau_sem_min: 0.5946951973402653
+  best_metrics: &id002
+    TO: 0.35681697463503215
+    U_ratio: 0.9058823529411765
+    P_ratio: 0.5490653783061443
+    fallback_rate: 0.1
+  history:
+  - trial: 0
+    theta:
+      epsilon_total: 30.865921100326588
+      hate_floor_delta: 0.37897720147015124
+      tau_sem_min: 0.43645726466467605
+    metrics:
+      TO: 0.3430351037711179
+      U_ratio: 0.9058823529411765
+      P_ratio: 0.5628472491700587
+      fallback_rate: 0.1
+  - trial: 1
+    theta:
+      epsilon_total: 11.54425275966779
+      hate_floor_delta: 0.25563736068430426
+      tau_sem_min: 0.4239473099603315
+    metrics:
+      TO: 0.349674117492175
+      U_ratio: 0.9058823529411765
+      P_ratio: 0.5562082354490016
+      fallback_rate: 0.1
+  - trial: 2
+    theta:
+      epsilon_total: 28.865353438147498
+      hate_floor_delta: 0.15165636303946373
+      tau_sem_min: 0.48127756332188465
+    metrics:
+      TO: 0.3430351037711179
+      U_ratio: 0.9058823529411765
+      P_ratio: 0.5628472491700587
+      fallback_rate: 0.1
+  - trial: 3
+    theta:
+      epsilon_total: 22.25160730201603
+      hate_floor_delta: 0.4540564425976676
+      tau_sem_min: 0.5037494846539122
+    metrics:
+      TO: 0.32415135594000166
+      U_ratio: 0.9058823529411765
+      P_ratio: 0.5817309970011748
+      fallback_rate: 0.1
+  - trial: 4
+    theta: *id001
+    metrics: *id002
+  search_space:
+    epsilon_total:
+    - 3.0
+    - 36.0
+    hate_floor_delta:
+    - 0.0
+    - 0.5
+    tau_sem_min:
+    - 0.1
+    - 0.9
+  note: "mock TO proxy \u2014 not the real harness"
+config:
+  em_hsd_v2:
+    epsilon_total: 12.300648865190226
+    epsilon_split: 0.5
+    k_generate: 4
+    k_max_after_prune: 4
+    tau_dup: 0.8
+    token_sanitize_top_m: 32
+    generation_temperature: 0.9
+    hate_floor_delta: 0.37790210207861197
+    tau_sem_min: 0.5946951973402653
+    min_edit_ratio: 0.03
+    clip: 5.0
+    use_refined_delta_u: true
+    utility_alpha: 1.0
+    delta_u: 0.5
+    min_length_tokens: 3
+  generation:
+    backend: mock
+    model: unsloth/Qwen3.5-2B
+    load_in_4bit: true
+    max_new_tokens: 256
+  embedding:
+    model: sentence-transformers/all-MiniLM-L6-v2
+    backend: simple
+  utility:
+    backend: proxy
+    model: unitary/unbiased-toxic-roberta
+    score_label: toxicity
+  triage_dp:
+    enabled: false
+    layer1:
+      threshold: 0.15
+      probes: []
+    layer2:
+      biber_boosts: {}
+    layer3:
+      optimizer: random_search
+      trials: 20
+    layer4:
+      ref: em_hsd_v2

@@ -1,0 +1,87 @@
+{
+  "mode": "em-hsd-v2",
+  "epsilon_total": 18.0,
+  "epsilon_1": 9.0,
+  "epsilon_2": 9.0,
+  "delta_u": 0.4,
+  "delta_u_naive": 1.0,
+  "x_priv": "you are a a dummy",
+  "protected_terms": [
+    "dummy"
+  ],
+  "token_log": [
+    {
+      "original": "you",
+      "normalized": "you",
+      "action": "kept",
+      "replacement": "you",
+      "epsilon": null,
+      "token_class": "function_word",
+      "reason": "function_word: kept (epsilon_1 skip)"
+    },
+    {
+      "original": "are",
+      "normalized": "are",
+      "action": "kept",
+      "replacement": "are",
+      "epsilon": null,
+      "token_class": "function_word",
+      "reason": "function_word: kept (epsilon_1 skip)"
+    },
+    {
+      "original": "a",
+      "normalized": "a",
+      "action": "kept",
+      "replacement": "a",
+      "epsilon": null,
+      "token_class": "function_word",
+      "reason": "function_word: kept (epsilon_1 skip)"
+    },
+    {
+      "original": "complete",
+      "normalized": "complete",
+      "action": "rewritten",
+      "replacement": "a",
+      "epsilon": 9.0,
+      "token_class": "content",
+      "reason": "em-hsd token sanitize; backend=hash; candidates=25; epsilon_1=9.0"
+    },
+    {
+      "original": "dummy",
+      "normalized": "dummy",
+      "action": "protected+canonicalised",
+      "replacement": "dummy",
+      "epsilon": null,
+      "token_class": "protected",
+      "reason": "hate-lexicon match; already canonical"
+    }
+  ],
+  "fallback": false,
+  "fallback_reason": "",
+  "k_generated": 4,
+  "k_after_prune": 1,
+  "k_valid": 1,
+  "candidates": [
+    {
+      "text": "Seriously, you are a a dummy if you ask me.",
+      "score": 0.45889774405933875,
+      "selected": true
+    }
+  ],
+  "filter_details": [
+    {
+      "text": "Seriously, you are a a dummy if you ask me.",
+      "valid": true,
+      "reject": "",
+      "p_hate": 0.85,
+      "sem_cos": 0.8838977440593387
+    }
+  ],
+  "P_hate_original": 0.85,
+  "P_hate_x_priv": 0.85,
+  "utility_backend": "proxy",
+  "utility_model": "proxy",
+  "selection_probs": [
+    1.0
+  ]
+}

@@ -1,0 +1,26 @@
+# EM-HSD 2.0 TRIAGE-DP integration test config (mock, no downloads)
+
+extends: em-hsd-v2-test.yaml
+
+em_hsd_v2:
+  deployment_mode: composed
+  epsilon_total: 9.0
+  epsilon_split: 1.0
+
+utility:
+  backend: proxy
+  model: unitary/unbiased-toxic-roberta
+  score_label: toxicity
+
+triage_dp:
+  enabled: true
+  layer1:
+    threshold: 0.15
+    probes: []
+  layer2:
+    biber_boosts: {}
+  layer3:
+    optimizer: random_search
+    trials: 3
+  layer4:
+    ref: em_hsd_v2

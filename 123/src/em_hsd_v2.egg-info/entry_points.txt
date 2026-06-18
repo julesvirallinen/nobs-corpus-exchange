@@ -1,0 +1,2 @@
+[console_scripts]
+em-hsd-run = em_hsd_cli.run:main

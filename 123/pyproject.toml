@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "em-hsd-v2"
+version = "0.1.0"
+description = "EM-HSD 2.0 layer-4 privatization (imports privhsd-spine from Johnny t0-1.03)"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "scikit-learn",
+    "pyyaml",
+    "regex",
+]
+
+[project.optional-dependencies]
+hf = [
+    "torch",
+    "transformers",
+    "sentence-transformers",
+]
+emhsd = [
+    "unsloth",
+]
+test = [
+    "pytest",
+]
+dev = [
+    "ruff",
+    "mypy",
+    "pytest",
+]
+
+[project.scripts]
+em-hsd-run = "em_hsd.cli.run:main"
+triage-dp-run = "em_hsd.cli.run:triage_dp_main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "gpu: tests requiring GPU and Unsloth models",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM"]
+ignore = ["E501", "E402", "B009"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.10"
+packages = ["em_hsd"]
+mypy_path = "src"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+strict = false
+
+[tool.em-hsd]
+spine_path = "../Johnny t0-1.03/src"
+no_downloads_default = true

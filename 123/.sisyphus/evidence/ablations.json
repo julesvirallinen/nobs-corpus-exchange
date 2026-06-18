@@ -1,0 +1,122 @@
+{
+  "baseline": {
+    "rows": 10,
+    "changed": 10,
+    "changed_rate": 1.0,
+    "fallback": 1,
+    "fallback_rate": 0.1,
+    "avg_k_valid": 0.9
+  },
+  "ablations": [
+    {
+      "code": "A1",
+      "description": "No epsilon_1 (paraphrase raw x)",
+      "result": {
+        "rows": 10,
+        "changed": 10,
+        "changed_rate": 1.0,
+        "fallback": 0,
+        "fallback_rate": 0.0,
+        "avg_k_valid": 1.0
+      }
+    },
+    {
+      "code": "A2",
+      "description": "No protected spans",
+      "result": {
+        "rows": 10,
+        "changed": 10,
+        "changed_rate": 1.0,
+        "fallback": 1,
+        "fallback_rate": 0.1,
+        "avg_k_valid": 0.9
+      }
+    },
+    {
+      "code": "A3",
+      "description": "No hate floor delta",
+      "result": {
+        "rows": 10,
+        "changed": 10,
+        "changed_rate": 1.0,
+        "fallback": 1,
+        "fallback_rate": 0.1,
+        "avg_k_valid": 0.9
+      }
+    },
+    {
+      "code": "A4",
+      "description": "No EM (argmax P_hate)",
+      "result": {
+        "rows": 10,
+        "changed": 10,
+        "changed_rate": 1.0,
+        "fallback": 1,
+        "fallback_rate": 0.1,
+        "avg_k_valid": 0.9
+      }
+    },
+    {
+      "code": "A5",
+      "description": "EM-HSD-Naive (delta_u=1)",
+      "result": {
+        "rows": 10,
+        "changed": 10,
+        "changed_rate": 1.0,
+        "fallback": 1,
+        "fallback_rate": 0.1,
+        "avg_k_valid": 0.9
+      }
+    },
+    {
+      "code": "A6",
+      "description": "Semantic-only EM",
+      "result": {
+        "rows": 10,
+        "changed": 10,
+        "changed_rate": 1.0,
+        "fallback": 5,
+        "fallback_rate": 0.5,
+        "avg_k_valid": 0.5
+      }
+    },
+    {
+      "code": "A7",
+      "description": "No tau_dup prune",
+      "result": {
+        "rows": 10,
+        "changed": 10,
+        "changed_rate": 1.0,
+        "fallback": 1,
+        "fallback_rate": 0.1,
+        "avg_k_valid": 3.6
+      }
+    },
+    {
+      "code": "A8",
+      "description": "No tau_sem_min",
+      "result": {
+        "rows": 10,
+        "changed": 10,
+        "changed_rate": 1.0,
+        "fallback": 1,
+        "fallback_rate": 0.1,
+        "avg_k_valid": 0.9
+      }
+    },
+    {
+      "code": "A9",
+      "description": "Hand vs optimized prompt (placeholder)",
+      "result": {
+        "rows": 10,
+        "changed": 10,
+        "changed_rate": 1.0,
+        "fallback": 1,
+        "fallback_rate": 0.1,
+        "avg_k_valid": 0.9
+      }
+    }
+  ],
+  "config": "configs/em-hsd-v2-test.yaml",
+  "input": "tests/data/synthetic_smoke.csv"
+}
