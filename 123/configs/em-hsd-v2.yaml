@@ -1,4 +1,70 @@
-# EM-HSD 2.0 production config (Unsloth Qwen3.5-2B + hash MLM for ε₁ tests use test yaml)mlm:  backend: hf  model: distilroberta-base  top_k: 48  clip: 5.0  include_original: trueepsilon:  protected: skip  function_word: skip  content: 6.0  default: 6.0protection:  enabled: truenormalization:  lowercase: true  collapse_whitespace: true  normalize_punctuation: true  strip_emoji: true  repair_elongation: true  fix_misspellings: truelexicon:  source: real  path: ../Johnny t0-1.03/data/lexicons/hate_terms.txt  test_terms: []  max_inter_char_gap: 2saliency:  enabled: false  model: unitary/unbiased-toxic-roberta  threshold: 0.15utility:  backend: hf  model: unitary/unbiased-toxic-roberta  score_label: toxicityem_hsd_v2:  epsilon_total: 18.0  epsilon_split: 0.5  k_generate: 6  k_max_after_prune: 4  tau_dup: 0.80  token_sanitize_top_m: 32  generation_temperature: 0.9  hate_floor_delta: 0.05  tau_sem_min: 0.55  min_edit_ratio: 0.08  clip: 5.0  use_refined_delta_u: true  utility_alpha: 1.0generation:  backend: unsloth  model: unsloth/Qwen3.5-2B  load_in_4bit: true  max_new_tokens: 256embedding:  model: sentence-transformers/all-MiniLM-L6-v2  backend: auto
+# EM-HSD 2.0 production config (Unsloth Qwen3.5-2B + hash MLM; for ε₁ tests use test yaml)
+
+mlm:
+  backend: hf
+  model: distilroberta-base
+  top_k: 48
+  clip: 5.0
+  include_original: true
+
+epsilon:
+  protected: skip
+  function_word: skip
+  content: 6.0
+  default: 6.0
+
+protection:
+  enabled: true
+
+normalization:
+  lowercase: true
+  collapse_whitespace: true
+  normalize_punctuation: true
+  strip_emoji: true
+  repair_elongation: true
+  fix_misspellings: true
+
+lexicon:
+  source: real
+  path: ../Johnny t0-1.03/data/lexicons/hate_terms.txt
+  test_terms: []
+  max_inter_char_gap: 2
+
+saliency:
+  enabled: false
+  model: unitary/unbiased-toxic-roberta
+  threshold: 0.15
+
+utility:
+  backend: hf
+  model: unitary/unbiased-toxic-roberta
+  score_label: toxicity
+
+em_hsd_v2:
+  epsilon_total: 18.0
+  epsilon_split: 0.5
+  k_generate: 6
+  k_max_after_prune: 4
+  tau_dup: 0.80
+  token_sanitize_top_m: 32
+  generation_temperature: 0.9
+  hate_floor_delta: 0.05
+  tau_sem_min: 0.55
+  min_edit_ratio: 0.08
+  clip: 5.0
+  use_refined_delta_u: true
+  utility_alpha: 1.0
+
+generation:
+  backend: unsloth
+  model: unsloth/Qwen3.5-2B
+  load_in_4bit: true
+  max_new_tokens: 256
+
+embedding:
+  model: sentence-transformers/all-MiniLM-L6-v2
+  backend: auto
+
 triage_dp:
   enabled: false
   layer1:

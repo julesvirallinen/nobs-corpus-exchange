@@ -18,6 +18,16 @@ from em_hsd.layer4.prune import prune_candidates
 class Layer4Orchestrator:
     """Sentence-level EM-HSD pipeline with explicit fallback policy."""
 
+    def __init__(self) -> None:
+        self._resources: ResourceManager | None = None
+        self._resources_config_id: int | None = None
+
+    def _get_resources(self, config: EmHsdConfig) -> ResourceManager:
+        if self._resources is None or self._resources_config_id != id(config):
+            self._resources = ResourceManager(config)
+            self._resources_config_id = id(config)
+        return self._resources
+
     @staticmethod
     def _apply_layer1_routes(
         text: str,
@@ -95,7 +105,7 @@ class Layer4Orchestrator:
         }
 
         from em_hsd.layer4.proposer import GenerativeProposer
-        resources = ResourceManager(config)
+        resources = self._get_resources(config)
         proposer = resources.proposer()
         proposer = typing.cast(GenerativeProposer, proposer)
         proposer.bind(config.spine.rng, canonicals)
@@ -160,10 +170,13 @@ class Layer4Orchestrator:
         return x_priv, audit
 
 
+_shared_orchestrator = Layer4Orchestrator()
+
+
 def privatize_em_hsd_v2(
     text: str,
     config: EmHsdConfig,
     **kwargs,
 ) -> tuple[str, dict]:
     """Thin wrapper around ``Layer4Orchestrator.privatize``."""
-    return Layer4Orchestrator().privatize(text, config, **kwargs)
+    return _shared_orchestrator.privatize(text, config, **kwargs)
