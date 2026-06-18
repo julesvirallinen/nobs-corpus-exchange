@@ -1,6 +1,9 @@
 # NoBS · Corpus Exchange
 
 
+[CLICKABLE DEMO](https://nobs-corpus-exchange.netlify.app) (pre-calculated LLM processing, live demo will be with real processing) 
+
+
 https://github.com/user-attachments/assets/e04ba134-6ca2-488c-accc-bdb789c655dc
 
 
