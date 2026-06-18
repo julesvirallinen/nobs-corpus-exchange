@@ -387,8 +387,16 @@ function dismissRows(ids){ ids.forEach(id=>{const r=S.rows.find(x=>x.id===id); i
 //// ---------------------------------------------------------------- render
 function renderPostIt(){
   const el=$("postit");
-  if(!S.rows.length || S.step !== "overview"){ el.innerHTML=""; return; }
-  const items = S.rows.map(r=>`<li>${esc(r.original)}</li>`).join("");
+  let originals = [];
+  if(S.proc === "running" && S.file){
+    // Show file rows immediately when user clicks Process, before pipeline finishes
+    originals = S.file.records.slice(0, CLIENT_SAMPLE_CAP)
+      .map(r => String(r[S.file.column] ?? "")).filter(t => t.trim());
+  } else if(S.proc === "done" && S.step === "overview"){
+    originals = S.rows.map(r => r.original);
+  }
+  if(!originals.length){ el.innerHTML=""; return; }
+  const items = originals.map(t=>`<li>${esc(t)}</li>`).join("");
   el.innerHTML=`<div class="postit"><div class="postit-title">original sentences</div><ol>${items}</ol></div>`;
 }
 
