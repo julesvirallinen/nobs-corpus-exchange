@@ -67,7 +67,7 @@ em_hsd_v2:
   use_refined_delta_u: true
 
 generation:
-  backend: transformers
+  backend: none   # Qwen step OFF for now
   model: Qwen/Qwen2.5-0.5B-Instruct
   load_in_4bit: false
   max_new_tokens: 128

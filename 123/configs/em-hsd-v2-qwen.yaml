@@ -2,7 +2,7 @@
 # Run on synthetic dev before full production lexicon.
 
 mlm:
-  backend: hash
+  backend: embedding
   model: distilroberta-base
   top_k: 24
   clip: 5.0
@@ -66,7 +66,7 @@ generation:
   max_new_tokens: 128
 
 embedding:
-  backend: simple
+  backend: hf
 
 triage_dp:
   enabled: false

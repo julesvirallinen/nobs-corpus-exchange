@@ -52,48 +52,6 @@ class GenerativeProposer(Protocol):
         ...
 
 
-class MockProposer:
-    """Deterministic paraphrase variants for unit tests (no GPU)."""
-
-    _OPENERS = (
-        "Honestly,", "Look,", "For what it's worth,", "I mean,", "Seriously,",
-        "To be fair,", "Not gonna lie,", "Real talk,",
-    )
-    _CLOSERS = (
-        " anyway.", " if you ask me.", " just saying.", " period.",
-        " no cap.", " for real.", " imo.",
-    )
-
-    def __init__(self, config: EmHsdConfig):
-        self.config = config
-        self._rng: np.random.Generator | None = None
-        self._protected: list[str] = []
-
-    def bind(self, rng: np.random.Generator, protected_terms: Sequence[str]) -> None:
-        self._rng = rng
-        self._protected = list(protected_terms)
-
-    def propose(self, text: str, k: int) -> list[str]:
-        if self._rng is None:
-            raise RuntimeError("MockProposer.bind() must be called before propose()")
-        rng = self._rng
-        out: list[str] = []
-        seen = set()
-        for i in range(max(k * 2, k)):
-            opener = self._OPENERS[(i + int(rng.integers(1000))) % len(self._OPENERS)]
-            closer = self._CLOSERS[int(rng.integers(len(self._CLOSERS)))]
-            body = text.strip()
-            if body.endswith("."):
-                body = body[:-1]
-            cand = f"{opener} {body}{closer}"
-            if cand not in seen:
-                seen.add(cand)
-                out.append(cand)
-            if len(out) >= k:
-                break
-        return out[:k]
-
-
 class TransformersQwenProposer:
     """Qwen paraphrase via HuggingFace transformers (CPU/GPU fallback when Unsloth fails)."""
 
@@ -292,20 +250,17 @@ class UnslothQwenProposer:
 
 def make_proposer(config: EmHsdConfig, *, allow_downloads: bool = True) -> GenerativeProposer:
     backend = config.generation.backend
-    if backend in ("unsloth", "transformers"):
-        if not allow_downloads:
-            raise RuntimeError(
-                f"Downloads are disabled; cannot load generative model ({backend})."
-            )
+    if backend not in ("unsloth", "transformers"):
+        raise ValueError(
+            f"unknown generation.backend {backend!r} (expected unsloth|transformers)"
+        )
+    if not allow_downloads:
+        raise RuntimeError(
+            f"Downloads are disabled; cannot load generative model ({backend})."
+        )
     if backend == "unsloth":
         return UnslothQwenProposer(config)
-    if backend == "transformers":
-        return TransformersQwenProposer(config)
-    if backend == "mock":
-        return MockProposer(config)
-    raise ValueError(
-        f"unknown generation.backend {backend!r} (expected mock|unsloth|transformers)"
-    )
+    return TransformersQwenProposer(config)
 
 
 def get_proposer(config: EmHsdConfig) -> GenerativeProposer:

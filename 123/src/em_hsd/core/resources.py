@@ -61,8 +61,7 @@ class ResourceManager:
         if self._encoder is not None:
             return self._encoder
         from em_hsd.core.embedding import make_encoder
-        # 'hf' requests a real model explicitly; 'auto' lets make_encoder fall back
-        # to SimpleEncoder when downloads are disabled.
+        # Only the real 'hf' SentenceTransformer encoder is supported.
         if self.config.embedding.backend == "hf":
             self._guard_download("load sentence transformer model")
         self._encoder = make_encoder(self.config.embedding, allow_downloads=self.allow_downloads)

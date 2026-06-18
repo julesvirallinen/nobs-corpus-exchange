@@ -13,7 +13,7 @@ from triage_dp.layer2_stylometric import DefaultStylometricPrior
 from triage_dp.layer3_calibration import DefaultTOOptimizer
 from triage_dp.layer4_rewrite import DefaultRewriteLayer, RewriteLayer
 
-TRIAGE_DP_CONFIG = "configs/em-hsd-v2-triage-dp-test.yaml"
+TRIAGE_DP_CONFIG = "configs/em-hsd-v2-triage-real.yaml"
 
 
 def test_layer_defaults_satisfy_protocols():

@@ -16,7 +16,7 @@ from mechanism.rng import make_row_rng
 from em_hsd import load_em_hsd_config
 from em_hsd.core.config import EmHsdConfig
 from em_hsd.layer4.orchestrator import Layer4Orchestrator
-from em_hsd.layer4.scorer import ProxyHateScorer
+from em_hsd.layer4.scorer import HFToxicityScorer
 
 _SEARCH_SPACE = {
     "epsilon_total": (3.0, 36.0),
@@ -25,12 +25,12 @@ _SEARCH_SPACE = {
 }
 
 
-class MockTOProxy:
-    """Mock trade-off proxy using a stylometry overlap + hate-score heuristic.
+class LocalTradeoffProxy:
+    """Local trade-off proxy: a stylometry-overlap privacy estimate combined
+    with the REAL hate scorer (unitary/unbiased-toxic-roberta) for utility.
 
-    This is intentionally **not** the real TRIAGE-DP harness. It is a local,
-    deterministic stand-in that lets us exercise the calibration search loop
-    without downloading models or requiring the full Johnny harness.
+    Not the full Johnny harness (privacy is an n-gram-overlap estimate), but the
+    hate/utility axis is the real classifier — no mock scorer.
     """
 
     def __init__(self, rng: random.Random):
@@ -45,7 +45,7 @@ class MockTOProxy:
             return 0.0
         return len(a_ng & b_ng) / len(a_ng)
 
-    def evaluate(self, original: str, privatized: str, author_id: str, scorer: ProxyHateScorer) -> dict[str, float]:
+    def evaluate(self, original: str, privatized: str, author_id: str, scorer: HFToxicityScorer) -> dict[str, float]:
         utility_original = float(scorer.score(original))
         utility_priv = float(scorer.score(privatized))
         privacy_original = 1.0
@@ -63,10 +63,8 @@ class MockTOProxy:
         }
 
 
-def _make_scorer(config: EmHsdConfig) -> ProxyHateScorer:
-    lex = config.spine.lexicon
-    terms = list(lex.test_terms) if lex.source == "test" else []
-    return ProxyHateScorer(terms)
+def _make_scorer(config: EmHsdConfig) -> HFToxicityScorer:
+    return HFToxicityScorer(config.utility.model, score_label=config.utility.score_label)
 
 
 def _evaluate_dev(
@@ -74,7 +72,7 @@ def _evaluate_dev(
     dev_rows: Sequence[tuple[str, str]],
     rng: random.Random,
 ) -> dict[str, float]:
-    proxy = MockTOProxy(rng)
+    proxy = LocalTradeoffProxy(rng)
     scorer = _make_scorer(config)
     orch = Layer4Orchestrator()
     tos: list[float] = []

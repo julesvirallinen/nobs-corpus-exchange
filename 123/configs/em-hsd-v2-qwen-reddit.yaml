@@ -3,7 +3,7 @@
 # Use conda env: lum  (torch 2.6+cu118, see scripts/setup_conda_env.sh)
 
 mlm:
-  backend: hash
+  backend: embedding
   model: distilroberta-base
   top_k: 24
   clip: 5.0
@@ -61,7 +61,7 @@ generation:
   max_new_tokens: 192
 
 embedding:
-  backend: simple
+  backend: hf
 
 triage_dp:
   enabled: false

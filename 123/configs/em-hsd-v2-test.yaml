@@ -1,7 +1,7 @@
 # EM-HSD 2.0 test config: mock proposer + hash MLM + simple encoder (no GPU/downloads)
 
 mlm:
-  backend: hash
+  backend: embedding
   model: distilroberta-base
   top_k: 24
   clip: 5.0
@@ -42,7 +42,7 @@ saliency:
   threshold: 0.15
 
 utility:
-  backend: proxy
+  backend: hf
   model: unitary/unbiased-toxic-roberta
   score_label: toxicity
 
@@ -62,14 +62,14 @@ em_hsd_v2:
   utility_alpha: 1.0
 
 generation:
-  backend: mock
-  model: unsloth/Qwen3.5-2B
+  backend: none   # Qwen step OFF for now
+  model: Qwen/Qwen2.5-0.5B-Instruct
   load_in_4bit: true
   max_new_tokens: 256
 
 embedding:
   model: sentence-transformers/all-MiniLM-L6-v2
-  backend: simple
+  backend: hf
 
 triage_dp:
   enabled: false

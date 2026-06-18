@@ -14,7 +14,8 @@ from em_hsd.layer4.orchestrator import Layer4Orchestrator
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_policy_defaults_to_false():
+def test_policy_defaults_to_false(monkeypatch):
+    monkeypatch.delenv("EM_HSD_ALLOW_DOWNLOADS", raising=False)
     assert not DownloadPolicy.is_allowed()
 
 

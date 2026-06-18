@@ -2,44 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-
-import regex as re
-
 from em_hsd.core.config import EmHsdConfig
 
 _HATE_KEYS = ("hate", "offensive", "abusive", "toxic", "hateful", "label_1")
-
-_INSULT_KEYWORDS = frozenset(
-    ["dummy", "doofus", "nitwit", "stupid", "idiot", "moron", "loser", "clown", "jerk", "fool", "silly", "pathetic", "useless", "worthless", "trash", "garbage", "zibber", "florbnax", "grumblefric"]
-)
-
-
-class ProxyHateScorer:
-    """Fast lexicon/keyword proxy returning P_hate in [0, 1]."""
-
-    name = "proxy"
-
-    def __init__(self, terms: Sequence[str] = ()):
-        self._terms = {_skeleton(t) for t in terms if t.strip()}
-        self._terms = {s for s in self._terms if len(s) >= 3}
-
-    def score(self, text: str) -> float:
-        if self._hit_terms(text) or self._hit_keywords(text):
-            return 0.85
-        return 0.05
-
-    def _hit_terms(self, text: str) -> bool:
-        if not self._terms:
-            return False
-        toks = re.findall(r"\S+", (text or "").lower())
-        tok_skels = {_skeleton(t) for t in toks}
-        despaced = _skeleton(re.sub(r"\s+", "", text or ""))
-        return any(term in tok_skels or term in despaced for term in self._terms)
-
-    def _hit_keywords(self, text: str) -> bool:
-        toks = re.findall(r"[^\W_]+", (text or "").lower())
-        return any(w in _INSULT_KEYWORDS for w in toks)
 
 
 def _label_index(id2label: dict, score_label: str) -> int:
@@ -114,17 +79,15 @@ def _skeleton(token: str) -> str:
 
 def make_scorer(config: EmHsdConfig, *, allow_downloads: bool = True) -> object:
     util = config.utility
-    if util.backend == "hf":
-        if not allow_downloads:
-            raise RuntimeError(
-                "Downloads are disabled; cannot load HuggingFace toxicity model."
-            )
-        return HFToxicityScorer(util.model, score_label=util.score_label)
-    terms: list[str] = []
-    lex = config.spine.lexicon
-    if lex.source == "test":
-        terms = list(lex.test_terms)
-    return ProxyHateScorer(terms)
+    if util.backend != "hf":
+        raise ValueError(
+            f"unknown utility.backend {util.backend!r} (expected hf)"
+        )
+    if not allow_downloads:
+        raise RuntimeError(
+            "Downloads are disabled; cannot load HuggingFace toxicity model."
+        )
+    return HFToxicityScorer(util.model, score_label=util.score_label)
 
 
 def get_scorer(config: EmHsdConfig) -> object:

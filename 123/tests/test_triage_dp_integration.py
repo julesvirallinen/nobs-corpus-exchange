@@ -45,7 +45,7 @@ def test_pipeline_matches_standalone_output():
 
 
 def test_pipeline_with_triage_dp_enabled_mode():
-    cfg = load_em_hsd_config("configs/em-hsd-v2-triage-dp-test.yaml")
+    cfg = load_em_hsd_config("configs/em-hsd-v2-triage-real.yaml")
     cfg.spine.rng = make_row_rng(22, run_seed="test")
     pipe = TriageDpPipeline(cfg)
     out, audit = pipe.sanitize("stop being such a dummy", original_text="Stop being such a dummy")

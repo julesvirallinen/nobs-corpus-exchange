@@ -4,7 +4,7 @@
 # Requires: EM_HSD_ALLOW_DOWNLOADS=1 on first model fetch; weights are cached afterwards.
 
 mlm:
-  backend: hash
+  backend: embedding
   model: distilroberta-base
   top_k: 24
   clip: 5.0
