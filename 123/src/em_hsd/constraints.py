@@ -1,5 +1,3 @@
-"""Backward-compatible shim for legacy `em_hsd.constraints` imports."""
-
 from __future__ import annotations
 
 from em_hsd.layer4.filter import (

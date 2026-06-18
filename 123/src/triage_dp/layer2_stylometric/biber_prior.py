@@ -1,17 +1,3 @@
-"""Layer 2 — Biber-style stylometric prior.
-
-Layer 1 occlusion can miss *systematic grammatical* identity carriers because
-removing one such token barely moves the hate classifier. Biber's register
-framework flags these classes as high authorship-identity / low hate-utility:
-2nd-person pronouns, place & time adverbials, and discourse particles
-(Arnold et al. show DP rewriting is register-blind to exactly these).
-
-This prior scans the text for those classes and emits ``Q2`` routes with a
-``biber_boost`` and a ``biber:<class>`` reason, so Layer 4 ε₁-rewrites them even
-though they are closed-class function words it would otherwise keep. It never
-overrides a Layer 1 protect route (hate signal wins).
-"""
-
 from __future__ import annotations
 
 import re
@@ -42,8 +28,6 @@ def _key(s: str) -> str:
 
 
 class BiberStylometricPrior:
-    """Boost privacy treatment of register-level identity carriers."""
-
     def boost(
         self,
         text: str,

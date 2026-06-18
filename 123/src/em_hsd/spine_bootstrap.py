@@ -1,5 +1,3 @@
-"""Add SPINE source directory to sys.path using the abstracted resolver."""
-
 from __future__ import annotations
 
 import sys

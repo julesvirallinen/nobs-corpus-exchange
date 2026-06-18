@@ -1,5 +1,3 @@
-"""SPINE path resolution for EM-HSD v2."""
-
 from __future__ import annotations
 
 import os
@@ -9,8 +7,6 @@ import tomllib
 
 
 class SpinePathResolver:
-    """Resolve the SPINE source directory using multiple strategies."""
-
     _SIBLING_NAME: str = "spine"
     _SIBREL_SRC: str = "src"
     _ENV_VAR: str = "EM_HSD_SPINE_PATH"

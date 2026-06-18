@@ -1,18 +1,3 @@
-"""Configuration for the SPINE mechanism.
-
-The config is loaded from YAML (see configs/*.yaml) into typed dataclasses.
-Two fields are *runtime-only* and never come from YAML:
-
-* ``rng``            -- the per-row ``numpy`` Generator (set by the wrapper,
-                        one independent generator per row; see SEED_POLICY.md).
-* ``uniform_budget`` -- set by the wrapper for ``dpmlm`` mode, which disables the
-                        protection step and spends one uniform epsilon on every
-                        content token.
-
-The mechanism package intentionally knows nothing about CSV columns, writers,
-or row identities beyond the opaque RNG handed to it.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field

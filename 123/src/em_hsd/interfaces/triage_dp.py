@@ -1,5 +1,3 @@
-"""TRIAGE-DP Layer4 adapter wrapping the EM-HSD Layer 4 orchestrator."""
-
 from __future__ import annotations
 
 from typing import Any

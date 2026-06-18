@@ -1,5 +1,3 @@
-"""Layer-4 orchestrator: Phase 1 token sanitize + Phase 2 generate/filter/select."""
-
 from __future__ import annotations
 
 import typing
@@ -16,7 +14,6 @@ from em_hsd.layer4.prune import prune_candidates
 
 
 class Layer4Orchestrator:
-    """Sentence-level EM-HSD pipeline with explicit fallback policy."""
 
     def __init__(self) -> None:
         self._resources: ResourceManager | None = None
@@ -37,14 +34,6 @@ class Layer4Orchestrator:
         layer2_routes: list[TokenRoute] | None = None,
         layer3_overrides: dict[str, Any] | None = None,
     ) -> tuple[str, dict]:
-        """Privatise one text string.
-
-        Fallback policy:
-          - ≥2 valid candidates  → exponential-mechanism select with ε₂ + refined Δu
-          - 1 valid candidate      → return it
-          - 0 valid / proposer fail → return ``x_priv`` (ε₁ still held)
-          - never return the raw input unchanged
-        """
         if config.spine.rng is None:
             raise ValueError("config.spine.rng must be set before privatize")
 
@@ -59,10 +48,6 @@ class Layer4Orchestrator:
         epsilon_2 = em.epsilon_2
         delta_u = selection_sensitivity(text, em.use_refined_delta_u)
 
-        # The pipeline merges Layer 1 + Layer 2 routes into one list (passed as
-        # layer1_routes); honour both signals from the union. Layer 1: tokens
-        # marked Q1/Q3 are kept verbatim. Layer 2: stylometric identity carriers
-        # (action=sanitize / biber_boost) are force-sanitised.
         all_routes = list(layer1_routes or []) + list(layer2_routes or [])
         protected_tokens = {
             r.token
@@ -115,8 +100,6 @@ class Layer4Orchestrator:
         audit["utility_backend"] = config.utility.backend
         audit["utility_model"] = getattr(scorer, "name", config.utility.model)
 
-        # Generation disabled (generation.backend: none): publish the ε₁
-        # token-sanitised x_priv directly — no paraphrase model is loaded.
         if config.generation.backend == "none":
             audit["fallback"] = True
             audit["fallback_reason"] = "generation_disabled"
@@ -129,9 +112,6 @@ class Layer4Orchestrator:
         encoder = resources.encoder()
 
         try:
-            # Paraphrase the ORIGINAL text (Layer-1 protected tokens are kept by
-            # the proposer), not the ε₁-sanitised x_priv — so candidates are
-            # legible, faithful sentences rather than paraphrases of token-salad.
             raw_candidates = proposer.propose(text, em.k_generate)
         except Exception as exc:
             audit["fallback"] = True
@@ -177,9 +157,7 @@ class Layer4Orchestrator:
             audit["selection_probs"] = [1.0]
             return valid[0], audit
 
-        # No candidate cleared every gate. Prefer the most semantically faithful
-        # generated paraphrase (a legible sentence) over the token-sanitised
-        # x_priv (which reads as word-salad).
+        # No candidate passed all filters; prefer best-effort paraphrase over token-salad x_priv.
         audit["fallback"] = True
         if batch.details:
             best = max(batch.details, key=lambda d: d.sem_cos)
@@ -200,5 +178,4 @@ def privatize_em_hsd_v2(
     config: EmHsdConfig,
     **kwargs,
 ) -> tuple[str, dict]:
-    """Thin wrapper around ``Layer4Orchestrator.privatize``."""
     return _shared_orchestrator.privatize(text, config, **kwargs)

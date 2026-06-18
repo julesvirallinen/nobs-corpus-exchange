@@ -1,19 +1,3 @@
-"""FastAPI server exposing the EM-HSD v2 Layer-4 pipeline to a demo frontend.
-
-Run via ``python scripts/serve.py`` (recommended) or ``em-hsd-serve``. Both
-ensure the SPINE source dir is importable before this module loads. If you
-import this module directly, make sure ``mechanism`` is already on the path
-(e.g. ``PYTHONPATH`` includes ``spine/src``).
-
-Endpoints:
-    GET  /                – static demo frontend (index.html)
-    GET  /health          – liveness + loaded backend info
-    GET  /api/configs     – list selectable config files
-    POST /api/privatize   – privatise one text string, return audit
-    POST /api/process     – batch: run many rows through the pipeline for the
-                            Corpus Exchange upload → review flow
-"""
-
 from __future__ import annotations
 
 import os
@@ -33,17 +17,12 @@ from em_hsd import load_em_hsd_config
 from em_hsd.core.config import EmHsdConfig
 from em_hsd.layer4.orchestrator import Layer4Orchestrator
 
-# Default demo config (real Qwen generation + toxic-roberta). Override with
-# EM_HSD_DEFAULT_CONFIG. There is no mock backend — all configs use real models.
 DEFAULT_CONFIG = os.environ.get("EM_HSD_DEFAULT_CONFIG", "em-hsd-v2-triage-real.yaml")
 
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
-# app.py lives at <root>/src/em_hsd/server/app.py → parents[3] is the repo root.
 _CONFIGS_DIR = Path(__file__).resolve().parents[3] / "configs"
 
-# The orchestrator mutates shared state (config.spine.rng, proposer binding)
-# per call and is not thread-safe; serialise privatize calls. The module-level
-# orchestrator keeps the scorer/encoder/proposer warm across requests.
+# Not thread-safe; serialise calls via lock. Module-level instance keeps resources warm.
 _orchestrator = Layer4Orchestrator()
 _lock = threading.Lock()
 
@@ -84,12 +63,7 @@ class PrivatizeResponse(BaseModel):
     audit: dict[str, Any]
 
 
-# --- Batch processing (Corpus Exchange "Process & validate" flow) -----------
-
-# Demo guardrail: cap rows per request so a large upload can't wedge the
-# single-threaded, lock-serialised orchestrator. The UI uploads a sample.
 MAX_BATCH_ROWS = 5000
-# Decision boundary for the proxy hate score: at/above this a row is flagged.
 HATE_THRESHOLD = 0.5
 
 
@@ -153,7 +127,6 @@ class ProcessResponse(BaseModel):
 
 
 def _tokens_changed(original: str, x_priv: str) -> int:
-    """Word-level edit count between the original and its anonymised rewrite."""
     a = original.split()
     b = x_priv.split()
     diff = sum(1 for i in range(min(len(a), len(b))) if a[i] != b[i])
@@ -175,16 +148,6 @@ def _derive_row(
     clf: dict[str, Any] | None = None,
     selected: str | None = None,
 ) -> ProcessedRow:
-    """Build the review record from the DP audit, optionally overlaying the
-    multi-label classifier's flagged/severity/category/confidence labels.
-
-    *selected* is the published privatised output (the chosen paraphrase under
-    the exponential mechanism); it is the text shown in the review table. The
-    audit's ``x_priv`` is only the intermediate token-sanitised string and
-    falls back here when no candidate was selected. When *clf* is given
-    (``classifier='hf'``) its labels drive the review fields; otherwise they
-    are derived from the proxy ``P_hate``.
-    """
     proxy_p = audit.get("P_hate_original")
     x_priv = selected if selected is not None else str(audit.get("x_priv", ""))
     changed = _tokens_changed(original, x_priv)
@@ -199,10 +162,7 @@ def _derive_row(
         p = float(proxy_p) if proxy_p is not None else 0.0
         flagged = p >= HATE_THRESHOLD
         p_hate = proxy_p
-        # Confidence = model probability for the predicted class (0.5..1).
         confidence = round(max(p, 1.0 - p), 3)
-        # Severity is a direct banding of the proxy hate probability — display
-        # mapping only, no scoring logic of our own.
         if not flagged:
             severity = "none"
         elif p >= 0.8:
@@ -231,7 +191,6 @@ def _derive_row(
 
 
 def _hf_classifier_available() -> bool:
-    """True if the multi-label toxic-roberta classifier can be loaded."""
     try:
         from em_hsd.server.classifier import classifier
     except Exception:
@@ -246,10 +205,7 @@ def list_configs() -> list[str]:
 
 
 def _resolve_config_name(name: str | None) -> Path:
-    """Map a config name to an absolute path inside the configs dir.
-
-    Only basenames within the configs dir are accepted (no traversal).
-    """
+    # Rejects path traversal — only bare filenames accepted.
     chosen = name or DEFAULT_CONFIG
     if Path(chosen).name != chosen:
         raise HTTPException(status_code=400, detail="config must be a bare file name")
@@ -264,21 +220,11 @@ def _resolve_config_name(name: str | None) -> Path:
 
 @lru_cache(maxsize=16)
 def _load_config_cached(config_path: str) -> EmHsdConfig:
-    """Load and cache a config by absolute path.
-
-    A stable config object id keeps the orchestrator's resource cache warm
-    (it is keyed by ``id(config)``).
-    """
     return load_em_hsd_config(config_path)
 
 
 @lru_cache(maxsize=16)
 def _pipeline_cached(config_path: str):
-    """Composed TRIAGE-DP pipeline for a config (Layers 1–4 when enabled).
-
-    Cached so Layer 1's occlusion classifier and Layer 4's resources stay warm
-    across requests.
-    """
     from triage_dp.pipeline import build_pipeline
 
     return build_pipeline(_load_config_cached(config_path))
@@ -288,9 +234,6 @@ def _privatize(text: str, config_path: str, seed: int, run_seed: str) -> tuple[s
     config = _load_config_cached(config_path)
     with _lock:
         config.spine.rng = make_row_rng(seed, run_seed=run_seed)
-        # When the config enables TRIAGE-DP, run the composed pipeline
-        # (Layer 1 cross-saliency → Layer 2 stylometric → Layer 3 calibrate →
-        # Layer 4 rewrite); otherwise run standalone Layer 4.
         if getattr(config.triage_dp, "enabled", False):
             return _pipeline_cached(config_path).sanitize(text)
         return _orchestrator.privatize(text, config)
@@ -330,7 +273,7 @@ def create_app() -> FastAPI:
             )
         except HTTPException:
             raise
-        except Exception as exc:  # surface pipeline errors as 500 with detail
+        except Exception as exc:
             raise HTTPException(status_code=500, detail=f"pipeline error: {exc}") from exc
 
         return PrivatizeResponse(
@@ -363,12 +306,8 @@ def create_app() -> FastAPI:
     @app.post("/api/process", response_model=ProcessResponse)
     def process(req: ProcessRequest) -> ProcessResponse:
         config_path = _resolve_config_name(req.config)
-        # Privatisation level varies the run-level seed so different levels
-        # produce different anonymisations from the same input.
         run_seed = f"{req.run_seed}-L{req.privatization_level}"
 
-        # Resolve the labelling source. 'hf' uses the real multi-label
-        # classifier when available, otherwise falls back to the proxy.
         use_hf = req.classifier == "hf" and _hf_classifier_available()
         applied_classifier = "hf" if use_hf else "proxy"
 
@@ -380,7 +319,7 @@ def create_app() -> FastAPI:
                 continue
             try:
                 selected, audit = _privatize(stripped, str(config_path), idx, run_seed)
-            except Exception as exc:  # surface pipeline errors as 500 with detail
+            except Exception as exc:
                 raise HTTPException(
                     status_code=500, detail=f"pipeline error on row {idx}: {exc}"
                 ) from exc
@@ -401,7 +340,6 @@ def create_app() -> FastAPI:
         for r in flagged:
             key = r.category or "unassigned"
             category_hist[key] = category_hist.get(key, 0) + 1
-        # Light grouping: distinct anonymised text among flagged rows.
         clusters = len({r.x_priv for r in flagged})
         count = len(records)
         return ProcessResponse(
@@ -433,7 +371,6 @@ app = create_app()
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Console entry point. Prefer ``python scripts/serve.py`` for path setup."""
     import argparse
 
     import uvicorn

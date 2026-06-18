@@ -1,5 +1,3 @@
-"""Optional integration stub for the SPINE harness evaluate()."""
-
 from __future__ import annotations
 
 from typing import Any

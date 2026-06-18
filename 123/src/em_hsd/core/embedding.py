@@ -1,5 +1,3 @@
-"""Text encoder for semantic floor and near-duplicate pruning."""
-
 from __future__ import annotations
 
 from collections.abc import Sequence

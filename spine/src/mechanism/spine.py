@@ -1,23 +1,3 @@
-"""SPINE orchestrator: the full per-row mechanism.
-
-Public entry point::
-
-    privatize(text: str, config) -> (new_text: str, token_log: list[dict])
-
-By construction the mechanism receives ONLY the Text string. It never sees the
-other CSV columns — there is simply no parameter for them. The per-row RNG is
-read from ``config.rng`` (set by the wrapper; see SEED_POLICY.md).
-
-Pipeline (see README "Module map"):
-  1. carve protected (hate) spans out of the raw text  (lexicon, obfuscation-aware)
-  2. segment the gaps into word/url/mention/hashtag/sep
-  3. deterministic style normalisation                 (normalize)
-  4. canonicalise protected tokens                      (canonicalize)
-  5. classify the remainder (function / number / content) (salient)
-  6. DP rewrite of content tokens via MLM + exponential mechanism (mlm + dp)
-  7. reassemble + emit a complete per-token log
-"""
-
 from __future__ import annotations
 
 from typing import List, Optional, Tuple
@@ -35,9 +15,7 @@ from .tokenize import (HASHTAG, MENTION, PROTECTED, SEP, URL, WORD, Segment,
 
 # ── resource caching (build the lexicon + MLM backend once per config) ──────
 
-def get_resources(config: Config):
-    """Build and cache (lexicon, backend, warning) on the config object."""
-    cached = getattr(config, "_resources", None)
+def get_resources(config: Config):    cached = getattr(config, "_resources", None)
     if cached is not None:
         return cached
     if config.protection_enabled:
@@ -91,9 +69,7 @@ def _log_entry(seg: Segment) -> dict:
     }
 
 
-def privatize(text: str, config: Config) -> Tuple[str, List[dict]]:
-    """Privatise a single Text string. See module docstring for the contract."""
-    if config.rng is None:
+def privatize(text: str, config: Config) -> Tuple[str, List[dict]]:    if config.rng is None:
         raise ValueError(
             "config.rng is not set. The wrapper must assign an independent "
             "per-row RNG before calling privatize (see SEED_POLICY.md)."

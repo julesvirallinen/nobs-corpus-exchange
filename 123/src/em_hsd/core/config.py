@@ -1,5 +1,3 @@
-"""EM-HSD 2.0 configuration (extends SPINE YAML with layer-4 fields)."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -65,8 +63,6 @@ class UtilitySettings:
 
 @dataclass
 class TriageDpSettings:
-    """Optional TRIAGE-DP integration settings."""
-
     enabled: bool = False
     layer1: dict = field(default_factory=dict)
     layer2: dict = field(default_factory=dict)
@@ -76,8 +72,6 @@ class TriageDpSettings:
 
 @dataclass
 class EmHsdConfig:
-    """SPINE mechanism config plus EM-HSD v2 layer settings."""
-
     spine: Config
     em_hsd_v2: EmHsdV2Settings = field(default_factory=EmHsdV2Settings)
     generation: GenerationSettings = field(default_factory=GenerationSettings)

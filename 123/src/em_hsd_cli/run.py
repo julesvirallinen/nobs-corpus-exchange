@@ -1,5 +1,3 @@
-"""Backward-compatible shim for legacy `em_hsd_cli.run` imports."""
-
 from __future__ import annotations
 
 from em_hsd.cli.run import build_parser, main, run, triage_dp_main

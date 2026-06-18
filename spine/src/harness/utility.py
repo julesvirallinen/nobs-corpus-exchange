@@ -1,14 +1,3 @@
-"""Utility probe: is HS-classification preserved after privatisation?
-
-For each classifier we report, on original vs privatised Text:
-  * F1 vs the gold HS labels (macro), and
-  * agreement = fraction of rows where the privatised prediction matches the
-    original prediction (label stability under privatisation).
-
-The ensemble ``Utility`` used by the trade-off estimate is the macro-F1 vs gold
-averaged over classifiers. Higher is better (classification still works).
-"""
-
 from __future__ import annotations
 
 from typing import Dict, List, Sequence

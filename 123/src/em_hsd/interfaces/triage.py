@@ -1,5 +1,3 @@
-"""Layer 1–3 protocol definitions for TRIAGE-DP integration."""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -11,8 +9,6 @@ from em_hsd.core.config import EmHsdConfig
 
 @dataclass
 class TokenRoute:
-    """Per-token decision produced by Layer 1 (and optionally Layer 2)."""
-
     token: str
     start: int
     end: int
@@ -26,8 +22,6 @@ class TokenRoute:
 
 @dataclass
 class OptimizedConfig:
-    """Layer 3 calibration output: theta overrides for Layer 4."""
-
     epsilon_total: float | None = None
     epsilon_split: float | None = None
     hate_floor_delta: float | None = None
@@ -60,8 +54,6 @@ class OptimizedConfig:
 
 @runtime_checkable
 class TriageRouter(Protocol):
-    """Layer 1: cross-saliency triage assigns a quadrant/action per token."""
-
     def route_tokens(self, text: str, config: EmHsdConfig) -> list[TokenRoute]:
         """Return one TokenRoute per token/span."""
         ...
@@ -69,8 +61,6 @@ class TriageRouter(Protocol):
 
 @runtime_checkable
 class StylometricPrior(Protocol):
-    """Layer 2: Biber-style prior boosts for token routes."""
-
     def boost(
         self, text: str, token_routes: Sequence[TokenRoute], config: EmHsdConfig
     ) -> list[TokenRoute]:
@@ -80,8 +70,6 @@ class StylometricPrior(Protocol):
 
 @runtime_checkable
 class TOOptimizer(Protocol):
-    """Layer 3: calibrate Layer 4 hyperparameters on a small dev set."""
-
     def optimize(
         self, dev_rows: Sequence[tuple[str, str]], config: EmHsdConfig
     ) -> OptimizedConfig:

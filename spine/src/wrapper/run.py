@@ -1,17 +1,3 @@
-"""CSV wrapper CLI.
-
-    python -m wrapper.run --in input.csv --out output.csv \
-        --mode {identity,dpmlm,spine} --config configs/default.yaml
-
-The wrapper parses the CSV, passes ONLY the Text string to the mechanism, writes
-output preserving every other field byte-for-byte, writes a per-row JSONL token
-log next to the output, and runs the diff check automatically after writing —
-failing loudly (non-zero exit) if the preservation contract is violated.
-
-Exit codes: 0 ok | 2 input/output or CSV-contract error | 3 diff-check failure
-| 4 backend/config error | 1 unexpected.
-"""
-
 from __future__ import annotations
 
 import argparse

@@ -1,16 +1,3 @@
-"""Lossless segmentation of a text gap into ordered segments.
-
-A ``Segment`` is the unit that flows through the whole mechanism. It carries the
-original surface form (immutable, for logging) and a mutable ``text`` that each
-pipeline stage may rewrite. Reassembly is just ``''.join(seg.text ...)``, so the
-identity transform (no stage mutates anything) reproduces the input exactly.
-
-This module knows nothing about the hate lexicon. Protected (hate-carrying)
-spans are carved out at the text level *before* this segmenter runs on the gaps
-between them (see spine.py), so a spaced obfuscation like ``s l u r`` is handled
-as one atomic protected unit rather than several word/sep segments.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -59,9 +46,7 @@ class Segment:
         return self.kind != SEP
 
 
-def segment(text: str) -> List[Segment]:
-    """Segment a plain string into ordered Segments. Lossless."""
-    segments: List[Segment] = []
+def segment(text: str) -> List[Segment]:    segments: List[Segment] = []
     idx = 0
     for m in _TOKEN_RE.finditer(text):
         start, end = m.start(), m.end()
@@ -78,6 +63,4 @@ def segment(text: str) -> List[Segment]:
     return segments
 
 
-def reassemble(segments: List[Segment]) -> str:
-    """Join segments back into a string using their current ``text``."""
-    return "".join(s.text for s in segments)
+def reassemble(segments: List[Segment]) -> str:    return "".join(s.text for s in segments)

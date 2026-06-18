@@ -1,21 +1,3 @@
-"""Differentially-private selection: clipping + the exponential mechanism.
-
-This is the only step with a formal privacy claim. Given a vector of candidate
-scores (clipped MLM logits) ``u`` with each ``u_i`` in ``[-C, C]`` (so the score
-range, i.e. the sensitivity of the selection's utility to a one-candidate change,
-is ``Δ = 2C``), the exponential mechanism samples candidate ``i`` with
-
-    P(i) ∝ exp( ε · u_i / (2 · Δ) ).
-
-This selection satisfies ε-differential privacy *with respect to the clipped
-score vector*. Clipping is what bounds Δ and hence makes ε meaningful; it is
-always applied before the softmax. See README "Privacy claim (narrow)" and
-arXiv:2407.00637 (DP-MLM, Meisenbacher et al.) for the construction this follows.
-
-Large ε  -> the softmax concentrates on the argmax (utility-preserving).
-Small ε  -> the distribution approaches uniform over the candidate set (private).
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -24,9 +6,7 @@ from typing import List, Sequence, Tuple
 import numpy as np
 
 
-def clip_logits(logits: np.ndarray, clip: float) -> np.ndarray:
-    """Clip scores into the bounded range [-clip, clip]."""
-    return np.clip(np.asarray(logits, dtype=np.float64), -abs(clip), abs(clip))
+def clip_logits(logits: np.ndarray, clip: float) -> np.ndarray:    return np.clip(np.asarray(logits, dtype=np.float64), -abs(clip), abs(clip))
 
 
 def exponential_weights(clipped_scores: np.ndarray, epsilon: float,
@@ -70,7 +50,5 @@ def select_index(raw_scores: Sequence[float], epsilon: float, clip: float,
 
 
 def select(candidates: Sequence[str], raw_scores: Sequence[float], epsilon: float,
-           clip: float, rng: np.random.Generator) -> Tuple[str, Selection]:
-    """Convenience wrapper returning (chosen_candidate, Selection)."""
-    sel = select_index(raw_scores, epsilon, clip, rng)
+           clip: float, rng: np.random.Generator) -> Tuple[str, Selection]:    sel = select_index(raw_scores, epsilon, clip, rng)
     return candidates[sel.index], sel

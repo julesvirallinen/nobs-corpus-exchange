@@ -1,11 +1,3 @@
-"""Console entry point for the EM-HSD demo server.
-
-This is a thin top-level shim (like :mod:`em_hsd_cli`) so that importing it does
-*not* trigger the ``em_hsd`` package import — which transitively imports
-``mechanism`` at load time. ``main`` first ensures the SPINE source dir is on
-``sys.path``, then launches uvicorn against ``em_hsd.server.app:app``.
-"""
-
 from __future__ import annotations
 
 import argparse

@@ -1,17 +1,3 @@
-"""Optional classifier-based saliency (config flag ``saliency.enabled``).
-
-Marks additional hate-carrying *content* tokens that the lexicon missed, by
-occlusion: drop each content token and measure the fall in a hate classifier's
-score; tokens whose removal drops the score by more than ``threshold`` are
-protected in place (kept, not DP-rewritten) so genuine hate signal is preserved.
-
-This is OFF by default and only does anything when the HF extra is installed.
-It loads its OWN classifier (the mechanism never imports the harness). It is
-slower (one forward pass per content token) and is intended as a refinement, not
-a requirement. Failures degrade gracefully: a warning, and the lexicon-only
-behaviour is used.
-"""
-
 from __future__ import annotations
 
 import threading
@@ -56,9 +42,7 @@ class OcclusionSaliency:
         return float(sum(probs[i] for i in self.hate_ids))
 
 
-def _get_occlusion_saliency(model_name: str) -> "OcclusionSaliency":
-    """Return a cached OcclusionSaliency, loading once per model_name."""
-    if model_name in _oc_cache:
+def _get_occlusion_saliency(model_name: str) -> "OcclusionSaliency":    if model_name in _oc_cache:
         return _oc_cache[model_name]
     with _oc_lock:
         if model_name not in _oc_cache:

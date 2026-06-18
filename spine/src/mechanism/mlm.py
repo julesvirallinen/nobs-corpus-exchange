@@ -1,26 +1,3 @@
-"""Masked-language-model backends that supply candidate logits for the DP step.
-
-The DP exponential mechanism (dp.py) is identical no matter where the logits
-come from; only the *source* differs:
-
-* ``HFMaskedLM`` -- a real open-weight masked LM (default: distilroberta-base)
-  from HuggingFace. This is the intended evaluation path. Requires
-  ``requirements-hf.txt`` and a one-time model download (CPU is fine).
-
-* ``HashMLM`` -- a deterministic, dependency-free stand-in. It produces
-  reproducible, context-dependent pseudo-logits over a fixed neutral vocabulary
-  so the entire DP machinery (clipping, exponential mechanism, per-row RNG) is
-  exercised with NO torch and NO downloads. It is NOT a language model and has
-  no semantic quality; it exists for the test suite, plumbing, and the offline
-  verify.sh fallback. Never ship a submission produced with the hash backend.
-
-* ``EmbeddingMLM`` -- PrivRewrite-style ε₁ backend: exponential mechanism over
-  top-M embedding cosine neighbors (bounded utility in [0, 1]). Requires
-  sentence-transformers for the embedding model.
-
-Both return RAW (unclipped) logits; clipping happens in dp.py.
-"""
-
 from __future__ import annotations
 
 import hashlib
@@ -54,8 +31,6 @@ _HASH_VOCAB = [
 
 
 class HashMLM:
-    """Deterministic, dependency-free pseudo-MLM. See module docstring."""
-
     name = "hash"
 
     def __init__(self, spread: float = 6.0, vocab: Sequence[str] = None):
@@ -111,14 +86,10 @@ def _load_candidate_vocab(path: str) -> List[str]:
     return words
 
 
-def _utility_from_cosine(cos: float) -> float:
-    """Map cosine similarity to bounded utility u in [0, 1] (PrivRewrite §4.1.1)."""
-    return float(max(0.0, min(1.0, (cos + 1.0) / 2.0)))
+def _utility_from_cosine(cos: float) -> float:    return float(max(0.0, min(1.0, (cos + 1.0) / 2.0)))
 
 
 class EmbeddingMLM:
-    """ε₁ backend: top-M cosine neighbors in public embedding space."""
-
     name = "embedding"
 
     def __init__(
@@ -222,8 +193,6 @@ class EmbeddingMLM:
 
 
 class HFMaskedLM:
-    """Real masked-LM backend (transformers + torch). Lazily imported."""
-
     name = "hf"
 
     def __init__(self, model_name: str = "distilroberta-base", max_length: int = 256):
@@ -290,9 +259,7 @@ class HFMaskedLM:
         return cands, np.asarray(scores, dtype=np.float64)
 
 
-def make_backend(cfg):
-    """Construct the MLM backend named by ``cfg.mlm.backend``."""
-    backend = cfg.mlm.backend.lower()
+def make_backend(cfg):    backend = cfg.mlm.backend.lower()
     if backend == "hash":
         return HashMLM()
     if backend == "hf":
