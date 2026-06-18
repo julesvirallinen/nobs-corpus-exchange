@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .config import EmHsdConfig
-from .constraints import filter_candidates
+from .candidate_sanitize import drop_prompt_echoes
+from .constraints import filter_candidates, normalized_edit_ratio
 from .dp_select import select_rewrite
 from .generative_proposer import get_proposer
 from .prune_candidates import prune_candidates
@@ -112,9 +113,20 @@ def privatize_em_hsd_v2(
     audit["k_generated"] = len(raw_candidates)
     pruned = prune_candidates(raw_candidates, config)
     audit["k_after_prune"] = len(pruned)
+    echoed, dropped_echoes = drop_prompt_echoes(pruned)
+    audit["k_after_echo_drop"] = len(echoed)
+    audit["echo_dropped"] = dropped_echoes
 
     batch = filter_candidates(
-        pruned, reference, x_priv, skels, config, scorer, encoder,
+        echoed,
+        reference,
+        x_priv,
+        skels,
+        config,
+        scorer,
+        encoder,
+        protected_terms=canonicals,
+        p_hate_x_priv=hsd_x_priv.p_hate,
     )
     audit["filter_details"] = [
         {
@@ -123,6 +135,7 @@ def privatize_em_hsd_v2(
             "reject": d.reject,
             "p_hate": d.p_hate,
             "sem_cos": d.sem_cos,
+            "sem_cos_x_priv": d.sem_cos_x_priv,
             "severity": d.severity,
             "severity_score": d.severity_score,
             "hs_labels": d.hs_labels,
@@ -132,8 +145,18 @@ def privatize_em_hsd_v2(
     ]
 
     valid = batch.valid
-    scores = batch.scores
+    scores = list(batch.scores)
     audit["k_valid"] = len(valid)
+
+    alpha = em.utility_alpha
+    if valid and alpha < 1.0:
+        scores = [
+            alpha * s + (1.0 - alpha) * min(1.0, normalized_edit_ratio(c, reference))
+            for c, s in zip(valid, scores)
+        ]
+        audit["selection_scores_blended"] = True
+    else:
+        audit["selection_scores_blended"] = False
 
     if len(valid) >= 2:
         chosen, sel = select_rewrite(

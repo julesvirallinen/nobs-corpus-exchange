@@ -57,6 +57,8 @@ def test_filter_rejects_missing_span(cfg):
         cfg,
         scorer,
         encoder,
+        protected_terms=["dummy"],
+        p_hate_x_priv=0.9,
     )
     assert batch.valid == []
     assert any(d.reject == "span" for d in batch.details)

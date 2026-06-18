@@ -18,6 +18,7 @@ class FilterResult:
     reject: str = ""
     p_hate: float = 0.0
     sem_cos: float = 0.0
+    sem_cos_x_priv: float = 0.0
     severity: str = "none"
     severity_score: float = 0.0
     hs_labels: List[str] = field(default_factory=list)
@@ -59,6 +60,41 @@ def spans_preserved(candidate: str, skeletons: Sequence[str]) -> bool:
     return True
 
 
+def protected_surfaces_present(candidate: str, protected_terms: Sequence[str]) -> bool:
+    """True when at least half of listed protected terms appear as substrings."""
+    if not protected_terms:
+        return True
+    lower = (candidate or "").lower()
+    terms = [str(t).strip().lower() for t in protected_terms if t and str(t).strip()]
+    if not terms:
+        return True
+    hits = sum(1 for t in terms if t in lower)
+    return hits >= max(1, (len(terms) + 1) // 2)
+
+
+def _hate_floor_threshold(p_orig: float, p_x_priv: float, delta: float) -> float:
+    """Adaptive floor: if ε₁ dropped P_hate, do not require original-level toxicity."""
+    if p_x_priv <= p_orig - delta:
+        return p_x_priv - delta
+    return p_orig - delta
+
+
+def _span_check_passes(
+    candidate: str,
+    skeletons: Sequence[str],
+    protected_terms: Sequence[str],
+    p_hate: float,
+    p_floor: float,
+) -> bool:
+    if spans_preserved(candidate, skeletons):
+        return True
+    if not protected_terms:
+        return False
+    if protected_surfaces_present(candidate, protected_terms) and p_hate >= p_floor:
+        return True
+    return False
+
+
 def normalized_edit_ratio(a: str, b: str) -> float:
     a, b = a or "", b or ""
     if not a and not b:
@@ -95,6 +131,7 @@ def _result_from_analysis(
     reject: str,
     analysis,
     sem_cos: float = 0.0,
+    sem_cos_x_priv: float = 0.0,
 ) -> FilterResult:
     return FilterResult(
         candidate=candidate,
@@ -102,6 +139,7 @@ def _result_from_analysis(
         reject=reject,
         p_hate=float(analysis.p_hate),
         sem_cos=sem_cos,
+        sem_cos_x_priv=sem_cos_x_priv,
         severity=str(analysis.severity),
         severity_score=float(analysis.severity_score),
         hs_labels=list(analysis.hs_labels),
@@ -117,10 +155,17 @@ def filter_candidates(
     config: EmHsdConfig,
     scorer: object,
     encoder: object,
+    *,
+    protected_terms: Sequence[str] | None = None,
+    p_hate_x_priv: float | None = None,
 ) -> FilterBatch:
     em = config.em_hsd_v2
     orig = _analyze(scorer, original)
     p_orig = float(orig.p_hate)
+    if p_hate_x_priv is None:
+        p_hate_x_priv = float(_analyze(scorer, x_priv).p_hate)
+    p_floor = _hate_floor_threshold(p_orig, float(p_hate_x_priv), em.hate_floor_delta)
+    terms = list(protected_terms or [])
     batch = FilterBatch()
 
     for cand in candidates:
@@ -128,33 +173,51 @@ def filter_candidates(
             batch.details.append(FilterResult(cand, False, "empty"))
             continue
 
-        if not spans_preserved(cand, protected_skels):
-            batch.details.append(FilterResult(cand, False, "span"))
-            continue
-
         cand_hsd = _analyze(scorer, cand)
         p_hate = float(cand_hsd.p_hate)
-        if p_hate < p_orig - em.hate_floor_delta:
+
+        if not _span_check_passes(cand, protected_skels, terms, p_hate, p_floor):
+            batch.details.append(_result_from_analysis(cand, False, "span", cand_hsd))
+            continue
+
+        if p_hate < p_floor:
             batch.details.append(_result_from_analysis(cand, False, "hate_floor", cand_hsd))
             continue
 
-        sem = float(encoder.cosine(original, cand))
-        if sem < em.tau_sem_min:
-            batch.details.append(_result_from_analysis(cand, False, "sem_floor", cand_hsd, sem))
+        sem_orig = float(encoder.cosine(original, cand))
+        if sem_orig < em.tau_sem_min:
+            batch.details.append(
+                _result_from_analysis(cand, False, "sem_floor_orig", cand_hsd, sem_orig)
+            )
+            continue
+
+        sem_priv = float(encoder.cosine(x_priv, cand))
+        if sem_priv < em.tau_sem_x_priv_min:
+            batch.details.append(
+                _result_from_analysis(
+                    cand, False, "sem_floor_priv", cand_hsd, sem_orig, sem_priv,
+                )
+            )
             continue
 
         len_ratio = len(cand) / max(len(original), 1)
         if len_ratio < 0.4 or len_ratio > 2.5:
-            batch.details.append(_result_from_analysis(cand, False, "length", cand_hsd, sem))
+            batch.details.append(
+                _result_from_analysis(cand, False, "length", cand_hsd, sem_orig, sem_priv)
+            )
             continue
 
         edit = normalized_edit_ratio(cand, original)
         if edit < em.min_edit_ratio:
-            batch.details.append(_result_from_analysis(cand, False, "min_edit", cand_hsd, sem))
+            batch.details.append(
+                _result_from_analysis(cand, False, "min_edit", cand_hsd, sem_orig, sem_priv)
+            )
             continue
 
         batch.valid.append(cand)
         batch.scores.append(p_hate)
-        batch.details.append(_result_from_analysis(cand, True, "", cand_hsd, sem))
+        batch.details.append(
+            _result_from_analysis(cand, True, "", cand_hsd, sem_orig, sem_priv)
+        )
 
     return batch

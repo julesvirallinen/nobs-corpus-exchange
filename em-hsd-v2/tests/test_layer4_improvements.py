@@ -131,13 +131,14 @@ def test_production_config_embedding_backend():
     assert prod.generation.prompt_profile == "auto"
     assert prod.generation.prompt_jitter is True
     assert prod.embedding.backend == "hf"
-    assert prod.em_hsd_v2.k_generate == 6
-    assert prod.em_hsd_v2.k_max_after_prune == 4
+    assert prod.em_hsd_v2.k_generate == 10
+    assert prod.em_hsd_v2.k_max_after_prune == 6
 
 
 def test_reddit_config_k_and_prompt_settings():
     reddit = load_em_hsd_config(str(ROOT / "configs" / "em-hsd-v2-qwen-reddit.yaml"))
     assert reddit.spine.mlm.backend == "embedding"
-    assert reddit.em_hsd_v2.k_generate == 6
-    assert reddit.em_hsd_v2.k_max_after_prune == 4
+    assert reddit.em_hsd_v2.k_generate == 10
+    assert reddit.em_hsd_v2.k_max_after_prune == 6
+    assert reddit.em_hsd_v2.tau_sem_x_priv_min == 0.35
     assert reddit.generation.prompt_jitter is True
