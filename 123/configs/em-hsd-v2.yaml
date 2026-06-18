@@ -63,7 +63,7 @@ generation:
 
 embedding:
   model: sentence-transformers/all-MiniLM-L6-v2
-  backend: auto
+  backend: hf
 
 triage_dp:
   enabled: false

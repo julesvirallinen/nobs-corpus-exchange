@@ -19,6 +19,15 @@ TEST_CONFIG = str(ROOT / "configs" / "em-hsd-v2-test.yaml")
 SYNTH_CSV = str(ROOT.parent / "Johnny t0-1.03" / "data" / "synthetic_dev.csv")
 
 
+@pytest.fixture(autouse=True)
+def _allow_model_downloads(monkeypatch):
+    """All backends are real now, so tests load models from the HF cache.
+
+    Permit it by default; download-policy tests opt out with monkeypatch.delenv.
+    """
+    monkeypatch.setenv("EM_HSD_ALLOW_DOWNLOADS", "1")
+
+
 @pytest.fixture
 def config_path():
     return TEST_CONFIG

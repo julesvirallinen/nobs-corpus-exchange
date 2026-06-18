@@ -12,9 +12,9 @@ from mechanism.rng import make_row_rng
 from em_hsd import load_em_hsd_config, privatize_em_hsd_v2
 from em_hsd.constraints import filter_candidates, protected_skeletons, spans_preserved
 from em_hsd.dp_select import select_rewrite
-from em_hsd.embedding import SimpleEncoder
+from em_hsd.embedding import get_encoder
 from em_hsd.sensitivity import refined_delta_u
-from em_hsd.utility_scorer import ProxyHateScorer, _score_from_logits
+from em_hsd.utility_scorer import _score_from_logits, get_scorer
 
 ROOT = Path(__file__).resolve().parents[1]
 TEST_CONFIG = str(ROOT / "configs" / "em-hsd-v2-test.yaml")
@@ -29,7 +29,7 @@ def test_full_pipeline_returns_non_empty(cfg):
     assert isinstance(out, str) and out.strip()
     assert audit["mode"] == "em-hsd-v2"
     assert audit["epsilon_1"] == audit["epsilon_2"]
-    assert audit["utility_backend"] in ("proxy", "hf")
+    assert audit["utility_backend"] == "hf"
     assert "P_hate_original" in audit
     assert "P_hate_x_priv" in audit
 
@@ -42,8 +42,8 @@ def test_spans_preserved_rejects_missing_protected():
 
 def test_filter_rejects_missing_span(cfg):
     cfg.spine.rng = make_row_rng(1, run_seed="test")
-    scorer = ProxyHateScorer(cfg.spine.lexicon.test_terms)
-    encoder = SimpleEncoder()
+    scorer = get_scorer(cfg)
+    encoder = get_encoder(cfg)
     batch = filter_candidates(
         ["you are a fool and should stop"],
         "Stop being such a dummy please",
@@ -93,9 +93,9 @@ def test_em_hsd_does_not_import_harness():
 
 
 def test_load_config(cfg):
-    assert cfg.generation.backend == "mock"
+    assert cfg.generation.backend == "none"
     assert cfg.em_hsd_v2.k_generate == 4
-    assert cfg.utility.backend in ("proxy", "hf")
+    assert cfg.utility.backend == "hf"
     assert cfg.utility.model == "unitary/unbiased-toxic-roberta"
     assert cfg.utility.score_label == "toxicity"
 
@@ -113,7 +113,8 @@ def test_real_config_uses_transformers_and_hf_embedding():
     assert real.utility.backend == "hf"
 
 
-def test_real_config_blocked_when_downloads_disabled():
+def test_real_config_blocked_when_downloads_disabled(monkeypatch):
+    monkeypatch.delenv("EM_HSD_ALLOW_DOWNLOADS", raising=False)
     real = load_em_hsd_config(REAL_CONFIG)
     real.spine.rng = make_row_rng(0, run_seed="real")
     with pytest.raises(RuntimeError):

@@ -16,6 +16,7 @@ Endpoints:
 
 from __future__ import annotations
 
+import os
 import threading
 from functools import lru_cache
 from pathlib import Path
@@ -32,9 +33,9 @@ from em_hsd import load_em_hsd_config
 from em_hsd.core.config import EmHsdConfig
 from em_hsd.layer4.orchestrator import Layer4Orchestrator
 
-# Default demo config: mock generation + proxy utility scorer — fast and
-# requires no model downloads. Override per request via the `config` field.
-DEFAULT_CONFIG = "em-hsd-v2-test.yaml"
+# Default demo config (real Qwen generation + toxic-roberta). Override with
+# EM_HSD_DEFAULT_CONFIG. There is no mock backend — all configs use real models.
+DEFAULT_CONFIG = os.environ.get("EM_HSD_DEFAULT_CONFIG", "em-hsd-v2-triage-real.yaml")
 
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
 # app.py lives at <root>/src/em_hsd/server/app.py → parents[3] is the repo root.

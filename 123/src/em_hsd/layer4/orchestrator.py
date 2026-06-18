@@ -105,13 +105,8 @@ class Layer4Orchestrator:
             "filter_details": [],
         }
 
-        from em_hsd.layer4.proposer import GenerativeProposer
         resources = self._get_resources(config)
-        proposer = resources.proposer()
-        proposer = typing.cast(GenerativeProposer, proposer)
-        proposer.bind(config.spine.rng, canonicals)
         scorer = resources.scorer()
-        encoder = resources.encoder()
         score = getattr(scorer, "score")
         p_orig = float(score(text))
         p_x_priv = float(score(x_priv))
@@ -119,6 +114,19 @@ class Layer4Orchestrator:
         audit["P_hate_x_priv"] = p_x_priv
         audit["utility_backend"] = config.utility.backend
         audit["utility_model"] = getattr(scorer, "name", config.utility.model)
+
+        # Generation disabled (generation.backend: none): publish the ε₁
+        # token-sanitised x_priv directly — no paraphrase model is loaded.
+        if config.generation.backend == "none":
+            audit["fallback"] = True
+            audit["fallback_reason"] = "generation_disabled"
+            return x_priv, audit
+
+        from em_hsd.layer4.proposer import GenerativeProposer
+        proposer = resources.proposer()
+        proposer = typing.cast(GenerativeProposer, proposer)
+        proposer.bind(config.spine.rng, canonicals)
+        encoder = resources.encoder()
 
         try:
             raw_candidates = proposer.propose(x_priv, em.k_generate)

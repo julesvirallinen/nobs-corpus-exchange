@@ -15,13 +15,13 @@ from em_hsd.constraints import (
 )
 from em_hsd.csv_compat import read_csv_compat, write_csv_compat
 from em_hsd.dp_select import select_rewrite
-from em_hsd.embedding import SimpleEncoder, get_encoder
-from em_hsd.generative_proposer import MockProposer, get_proposer
+from em_hsd.embedding import SentenceTransformerEncoder, get_encoder
+from em_hsd.generative_proposer import TransformersQwenProposer, get_proposer
 from em_hsd.prune_candidates import prune_candidates
 from em_hsd.resources import ResourceManager, protected_canonicals
 from em_hsd.sensitivity import refined_delta_u, selection_sensitivity
 from em_hsd.token_sanitize import token_sanitize
-from em_hsd.utility_scorer import ProxyHateScorer, get_scorer
+from em_hsd.utility_scorer import HFToxicityScorer, get_scorer
 
 
 def test_backward_compat_imports():
@@ -43,8 +43,8 @@ def test_backward_compat_imports():
     assert isinstance(ResourceManager, type)
     assert isinstance(FilterResult, type)
     assert isinstance(FilterBatch, type)
-    assert isinstance(SimpleEncoder, type)
-    assert isinstance(MockProposer, type)
-    assert isinstance(ProxyHateScorer, type)
+    assert isinstance(SentenceTransformerEncoder, type)
+    assert isinstance(TransformersQwenProposer, type)
+    assert isinstance(HFToxicityScorer, type)
     assert EmHsdConfig is not None
     assert spans_preserved("dummy", protected_skeletons(["dummy"]))

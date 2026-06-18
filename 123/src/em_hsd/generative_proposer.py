@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from em_hsd.layer4.proposer import (
     GenerativeProposer,
-    MockProposer,
     TransformersQwenProposer,
     UnslothQwenProposer,
     get_proposer,
@@ -13,7 +12,6 @@ from em_hsd.layer4.proposer import (
 
 __all__ = [
     "GenerativeProposer",
-    "MockProposer",
     "TransformersQwenProposer",
     "UnslothQwenProposer",
     "make_proposer",

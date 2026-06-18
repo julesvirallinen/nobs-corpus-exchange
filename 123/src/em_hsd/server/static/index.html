@@ -482,7 +482,7 @@ function stepUpload(){
         <div style="padding:6px 16px 14px;">
           ${stepHtml}
           <button class="btn" style="width:100%;margin-top:14px;" data-act="${done?'goOverview':'process'}" ${(!has||running)?"disabled":""}>${esc(cta)}</button>
-          <div style="margin-top:11px;font-size:11px;color:var(--faint);line-height:1.5;">Runs the real TRIAGE-DP pipeline (Layers 1–4) locally via <span class="mono">/api/process</span>. Mock model backend — no downloads.</div>
+          <div style="margin-top:11px;font-size:11px;color:var(--faint);line-height:1.5;">Runs the real TRIAGE-DP pipeline (Layers 1–4) locally via <span class="mono">/api/process</span>. Real models (Qwen generation + toxic-roberta) — loaded from cache.</div>
         </div>
       </div>
     </div>

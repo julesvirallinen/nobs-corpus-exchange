@@ -39,7 +39,21 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--reload", action="store_true", help="auto-reload on code changes")
+    p.add_argument(
+        "--config",
+        dest="config",
+        default=None,
+        help="default config name (real models only; defaults to em-hsd-v2-qwen.yaml)",
+    )
     args = p.parse_args(argv)
+
+    import os
+
+    # Mocks have been removed — every config uses real models, so always permit
+    # loading them (from the HF cache; set HF_HUB_OFFLINE=1 to forbid network).
+    os.environ.setdefault("EM_HSD_ALLOW_DOWNLOADS", "1")
+    if args.config:
+        os.environ["EM_HSD_DEFAULT_CONFIG"] = args.config
 
     spine = _bootstrap_spine()
     if spine is None:
