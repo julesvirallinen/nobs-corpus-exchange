@@ -119,6 +119,13 @@
   .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
   .spinner{width:13px;height:13px;border:2px solid var(--accent-border);border-top-color:var(--accent);border-radius:99px;animation:spin .7s linear infinite;display:inline-block;}
   .mock-banner{display:flex;align-items:center;gap:10px;background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:10px;padding:10px 14px;font-size:12.5px;color:var(--warn);margin-bottom:18px;}
+
+  /* post-it — intentionally not part of the design */
+  #postit{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) rotate(-2deg);z-index:60;pointer-events:auto;}
+  .postit{background:#fef08a;box-shadow:3px 4px 18px rgba(0,0,0,.28),0 1px 3px rgba(0,0,0,.12);padding:14px 16px 18px;width:340px;max-height:240px;overflow-y:auto;font-family:Georgia,serif;font-size:13px;line-height:1.55;color:#1a1207;}
+  .postit-title{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#78600a;margin-bottom:9px;border-bottom:1.5px solid #e8cc50;padding-bottom:5px;}
+  .postit ol{margin:0;padding-left:18px;}
+  .postit li{margin-bottom:4px;word-break:break-word;}
 </style>
 </head>
 <body>
@@ -153,6 +160,7 @@
 </div>
 
 <div id="overlay"></div>
+<div id="postit"></div>
 
 <input type="file" id="filepick" accept=".csv,.jsonl,.txt" style="display:none" />
 
@@ -377,6 +385,13 @@ function confirmRows(ids){ ids.forEach(id=>{const r=S.rows.find(x=>x.id===id); i
 function dismissRows(ids){ ids.forEach(id=>{const r=S.rows.find(x=>x.id===id); if(r){r.dismissed=true;r.validated=true;}}); ids.forEach(id=>S.sel.delete(id)); toast(`Dismissed ${ids.length} item${ids.length>1?"s":""}`); }
 
 //// ---------------------------------------------------------------- render
+function renderPostIt(){
+  const el=$("postit");
+  if(!S.rows.length){ el.innerHTML=""; return; }
+  const items = S.rows.map((r,i)=>`<li>${esc(r.original)}</li>`).join("");
+  el.innerHTML=`<div class="postit"><div class="postit-title">original sentences</div><ol>${items}</ol></div>`;
+}
+
 function render(){
   renderTabs();
   const sf=$("surface");
@@ -386,6 +401,7 @@ function render(){
   else if(S.tab==="country") sf.innerHTML=viewCountry();
   else if(S.tab==="access") sf.innerHTML=viewAccess();
   renderOverlay();
+  renderPostIt();
   document.querySelectorAll(".rail button[data-tab]").forEach(b=>b.classList.toggle("on",b.dataset.tab===S.tab));
 }
 function renderTabs(){
