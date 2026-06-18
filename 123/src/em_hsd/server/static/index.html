@@ -138,7 +138,7 @@
     <button data-tab="country" title="Country deep-dive">◵</button>
     <button data-tab="access" title="Access &amp; sharing">⊕</button>
     <button data-tab="flow" title="Process &amp; validate">✓</button>
-    <span class="me">RN</span>
+    <span class="me">NS</span>
   </div>
 
   <div class="main">
@@ -149,7 +149,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:9px;">
         <span style="display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);border:1px solid var(--line2);border-radius:7px;padding:6px 11px;background:#fff;">Command <span class="kbd">⌘K</span></span>
-        <span style="font-size:12.5px;font-weight:600;color:var(--ink2);">Renaissance Numérique</span>
+        <span style="font-size:12.5px;font-weight:600;color:var(--ink2);">Dr. Nob S.</span>
         <span class="tag-green">HSD client</span>
       </div>
     </div>
@@ -516,7 +516,6 @@ function stepUpload(){
         <div style="padding:6px 16px 14px;">
           ${stepHtml}
           <button class="btn" style="width:100%;margin-top:14px;" data-act="${done?'goOverview':'process'}" ${(!has||running)?"disabled":""}>${esc(cta)}</button>
-          <div style="margin-top:11px;font-size:11px;color:var(--faint);line-height:1.5;">Runs the real TRIAGE-DP pipeline (Layers 1–4) locally via <span class="mono">/api/process</span>. Real models (Qwen generation + toxic-roberta) — loaded from cache.</div>
         </div>
       </div>
     </div>
@@ -924,7 +923,7 @@ function viewCountry(){
   </div>`;
 }
 function viewAccess(){
-  const people=[["Renaissance Numérique","Owner · full control","Owner","#3b5bdb","#eef1fc"],["CNRS · Médialab","Anonymised corpus, by request","Researcher","#2f7d57","#e8f3ec"],["EU DisinfoLab","Aggregated stats only","Viewer","#5b6170","#f1f2f6"],["Council of Europe","Aggregated stats only","Viewer","#5b6170","#f1f2f6"]];
+  const people=[["Dr. Nob S.","Owner · full control","Owner","#3b5bdb","#eef1fc"],["CNRS · Médialab","Anonymised corpus, by request","Researcher","#2f7d57","#e8f3ec"],["EU DisinfoLab","Aggregated stats only","Viewer","#5b6170","#f1f2f6"],["Council of Europe","Aggregated stats only","Viewer","#5b6170","#f1f2f6"]];
   const rows=people.map(p=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #f4f5f8;"><div><div style="font-size:13.5px;font-weight:600;">${p[0]}</div><div style="font-size:12px;color:var(--faint);margin-top:1px;">${p[1]}</div></div><span style="font-size:11px;font-weight:700;color:${p[3]};background:${p[4]};border-radius:99px;padding:4px 11px;">${p[2]}</span></div>`).join("");
   return `<div class="wrap" style="max-width:880px;">
     <h2 class="title">Access &amp; sharing</h2>
