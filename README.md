@@ -1,7 +1,7 @@
 # NoBS · Corpus Exchange
 
 
-[CLICKABLE DEMO](136.114.94.183:8000) (pre-calculated LLM processing, live demo will be with real processing) 
+[CLICKABLE DEMO](https//136.114.94.183:8000) (pre-calculated LLM processing, live demo will be with real processing) 
 
 
 https://github.com/user-attachments/assets/e04ba134-6ca2-488c-accc-bdb789c655dc
