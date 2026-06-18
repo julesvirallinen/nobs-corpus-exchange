@@ -271,10 +271,27 @@ def _load_config_cached(config_path: str) -> EmHsdConfig:
     return load_em_hsd_config(config_path)
 
 
+@lru_cache(maxsize=16)
+def _pipeline_cached(config_path: str):
+    """Composed TRIAGE-DP pipeline for a config (Layers 1–4 when enabled).
+
+    Cached so Layer 1's occlusion classifier and Layer 4's resources stay warm
+    across requests.
+    """
+    from triage_dp.pipeline import build_pipeline
+
+    return build_pipeline(_load_config_cached(config_path))
+
+
 def _privatize(text: str, config_path: str, seed: int, run_seed: str) -> tuple[str, dict]:
     config = _load_config_cached(config_path)
     with _lock:
         config.spine.rng = make_row_rng(seed, run_seed=run_seed)
+        # When the config enables TRIAGE-DP, run the composed pipeline
+        # (Layer 1 cross-saliency → Layer 2 stylometric → Layer 3 calibrate →
+        # Layer 4 rewrite); otherwise run standalone Layer 4.
+        if getattr(config.triage_dp, "enabled", False):
+            return _pipeline_cached(config_path).sanitize(text)
         return _orchestrator.privatize(text, config)
 
 

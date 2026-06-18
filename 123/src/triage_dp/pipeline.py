@@ -89,9 +89,9 @@ class TriageDpPipeline:
 
         # Layer 1: route tokens.
         routes: list[TokenRoute] = self.triage.route_tokens(source, cfg)
-        # Layer 2: stylometric boosts on the routes.
-        if routes:
-            routes = self.stylometric.boost(source, routes, cfg)
+        # Layer 2: stylometric prior — always runs; it adds its own routes for
+        # identity carriers even when Layer 1 found no salient hate tokens.
+        routes = self.stylometric.boost(source, routes, cfg)
         # Layer 3: calibrate Layer 4 hyperparameters (TRIAGE-DP mode only).
         overrides = self._calibrate(dev_rows)
         # Layer 4: sentence-level rewrite under the exponential mechanism.
@@ -103,4 +103,26 @@ class TriageDpPipeline:
         )
 
 
-__all__ = ["TriageDpPipeline"]
+def build_pipeline(config: EmHsdConfig) -> TriageDpPipeline:
+    """Construct the pipeline for *config*.
+
+    When ``triage_dp.enabled`` is set, wires the real Layers 1–3 (cross-saliency
+    router, Biber stylometric prior, trade-off calibrator). Otherwise returns the
+    NoOp-default pipeline (standalone Layer 4 behaviour).
+    """
+    if not getattr(config.triage_dp, "enabled", False):
+        return TriageDpPipeline(config)
+
+    from triage_dp.layer1_triage.saliency_router import SaliencyTriageRouter
+    from triage_dp.layer2_stylometric.biber_prior import BiberStylometricPrior
+    from triage_dp.layer3_calibration.calibrate_optimizer import CalibrateTOOptimizer
+
+    return TriageDpPipeline(
+        config,
+        triage=SaliencyTriageRouter(),
+        stylometric=BiberStylometricPrior(),
+        calibration=CalibrateTOOptimizer(),
+    )
+
+
+__all__ = ["TriageDpPipeline", "build_pipeline"]

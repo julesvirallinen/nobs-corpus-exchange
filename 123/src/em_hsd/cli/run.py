@@ -20,10 +20,10 @@ from em_hsd.csv_compat import (
     assert_preserved_compat,
     read_csv_compat,
 )
-from triage_dp.pipeline import TriageDpPipeline
 from em_hsd.io.audit_io import AuditJsonlWriter
 from em_hsd.resources import init_spine_resources
 from em_hsd.utility_scorer import get_scorer
+from triage_dp.pipeline import TriageDpPipeline
 
 _MODE_DESCRIPTION = "Privatise Text column via EM-HSD 2.0 / TRIAGE-DP Layer 4."
 
@@ -168,7 +168,11 @@ def run(
 
     adapter: TriageDpPipeline | None = None
     if mode == "triage-dp":
-        adapter = TriageDpPipeline(config)
+        # build_pipeline wires the real Layers 1–3 when triage_dp.enabled,
+        # otherwise the NoOp defaults (standalone Layer 4).
+        from triage_dp.pipeline import build_pipeline
+
+        adapter = build_pipeline(config)
 
     log_path = log_path or _default_log_path(out_path)
     ckpt_path = _checkpoint_path(out_path)
