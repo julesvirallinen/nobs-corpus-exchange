@@ -23,7 +23,7 @@ def _bootstrap_spine() -> None:
     if env:
         candidates.append(Path(env).expanduser())
     repo_root = Path(__file__).resolve().parents[1]  # 123/
-    candidates.append(repo_root.parent / "Johnny t0-1.03" / "src")
+    candidates.append(repo_root.parent / "spine" / "src")
     for candidate in candidates:
         resolved = candidate.resolve()
         if resolved.exists() and str(resolved) not in sys.path:

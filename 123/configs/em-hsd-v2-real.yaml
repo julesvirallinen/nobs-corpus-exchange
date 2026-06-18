@@ -29,7 +29,7 @@ normalization:
 
 lexicon:
   source: real
-  path: ../Johnny t0-1.03/data/lexicons/hate_terms.txt
+  path: ../spine/data/lexicons/hate_terms.txt
   test_terms: []
   max_inter_char_gap: 2
 

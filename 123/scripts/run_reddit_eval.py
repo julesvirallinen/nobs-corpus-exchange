@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Privatize Reddit CSV and run Johnny harness.evaluate for TO / utility / privacy."""
+"""Privatize Reddit CSV and run SPINE harness.evaluate for TO / utility / privacy."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SPINE = ROOT.parent / "Johnny t0-1.03"
+SPINE = ROOT.parent / "spine"
 DEFAULT_IN = ROOT.parent / "data" / "reddit_25_TKDeVb4.csv"
 DEFAULT_OUT = ROOT.parent / "data" / "reddit_25_emhsd_v2.csv"
 DEFAULT_CONFIG = ROOT / "configs" / "em-hsd-v2-qwen-reddit.yaml"

@@ -161,7 +161,7 @@ def load_em_hsd_config(path: str) -> EmHsdConfig:
     with open(cfg_path, encoding="utf-8") as fh:
         data = yaml.safe_load(fh) or {}
     spine = config_from_dict(data)
-    # Resolve lexicon path relative to config file / Johnny tree.
+    # Resolve lexicon path relative to config file / spine tree.
     lex_path = Path(spine.lexicon.path)
     if not lex_path.is_file():
         for base in (cfg_path.parent, cfg_path.parent.parent):
@@ -170,7 +170,7 @@ def load_em_hsd_config(path: str) -> EmHsdConfig:
                 spine.lexicon.path = str(candidate)
                 break
         else:
-            johnny = cfg_path.parent.parent / "Johnny t0-1.03" / "data" / "lexicons" / "hate_terms.txt"
+            johnny = cfg_path.parent.parent / "spine" / "data" / "lexicons" / "hate_terms.txt"
             if johnny.is_file():
                 spine.lexicon.path = str(johnny)
     return EmHsdConfig(

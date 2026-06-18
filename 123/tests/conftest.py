@@ -9,14 +9,14 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SPINE_SRC = ROOT.parent / "Johnny t0-1.03" / "src"
+SPINE_SRC = ROOT.parent / "spine" / "src"
 if str(SPINE_SRC) not in sys.path:
     sys.path.insert(0, str(SPINE_SRC))
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
 TEST_CONFIG = str(ROOT / "configs" / "em-hsd-v2-test.yaml")
-SYNTH_CSV = str(ROOT.parent / "Johnny t0-1.03" / "data" / "synthetic_dev.csv")
+SYNTH_CSV = str(ROOT.parent / "spine" / "data" / "synthetic_dev.csv")
 
 
 @pytest.fixture(autouse=True)
@@ -41,5 +41,5 @@ def cfg():
 
 @pytest.fixture
 def synth_path():
-    assert os.path.exists(SYNTH_CSV), "synthetic_dev.csv missing in Johnny t0-1.03"
+    assert os.path.exists(SYNTH_CSV), "synthetic_dev.csv missing in spine"
     return SYNTH_CSV

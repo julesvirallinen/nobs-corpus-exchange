@@ -10,7 +10,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
 VENV="$REPO/.venv"
-SPINE_DIR="$REPO/Johnny t0-1.03/src"
+SPINE_DIR="$REPO/spine/src"
 PORT="${PORT:-8000}"
 HOST="${HOST:-127.0.0.1}"
 

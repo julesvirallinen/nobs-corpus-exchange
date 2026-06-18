@@ -23,6 +23,7 @@ src/em_hsd/core/__init__.py
 src/em_hsd/core/config.py
 src/em_hsd/core/dp_select.py
 src/em_hsd/core/embedding.py
+src/em_hsd/core/model_cache.py
 src/em_hsd/core/paths.py
 src/em_hsd/core/policy.py
 src/em_hsd/core/resources.py

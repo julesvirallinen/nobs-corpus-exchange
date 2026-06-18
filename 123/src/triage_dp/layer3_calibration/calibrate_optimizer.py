@@ -7,7 +7,7 @@ Layer 4 hyperparameters on a small dev set instead of returning the NoOp empty
 config.
 
 Honest scope: the trade-off proxy in ``calibrate.py`` is a deterministic
-stand-in, not the Johnny harness. With no dev rows there is nothing to
+stand-in, not the SPINE harness. With no dev rows there is nothing to
 calibrate, so it returns an empty :class:`OptimizedConfig` (Layer 4 defaults).
 """
 

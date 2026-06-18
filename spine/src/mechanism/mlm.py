@@ -88,7 +88,7 @@ def _resolve_vocab_path(path: str) -> Path:
     p = Path(path)
     if p.is_file():
         return p
-    root = Path(__file__).resolve().parents[2]  # Johnny t0-1.03/
+    root = Path(__file__).resolve().parents[2]  # spine/
     candidate = root / path
     if candidate.is_file():
         return candidate

@@ -3,7 +3,7 @@
 Run via ``python scripts/serve.py`` (recommended) or ``em-hsd-serve``. Both
 ensure the SPINE source dir is importable before this module loads. If you
 import this module directly, make sure ``mechanism`` is already on the path
-(e.g. ``PYTHONPATH`` includes ``Johnny t0-1.03/src``).
+(e.g. ``PYTHONPATH`` includes ``spine/src``).
 
 Endpoints:
     GET  /                – static demo frontend (index.html)

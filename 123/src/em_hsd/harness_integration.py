@@ -1,4 +1,4 @@
-"""Optional integration stub for the Johnny TRIAGE-DP harness evaluate()."""
+"""Optional integration stub for the SPINE harness evaluate()."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ def evaluate_with_harness(original_csv: str, privatized_csv: str, config_path: s
     """Call harness.evaluate if available; otherwise return a graceful degrade dict.
 
     This function does **not** import harness eagerly, so it is safe to import
-    in environments where Johnny t0-1.03 is not installed.
+    in environments where spine is not installed.
     """
     try:
         module = __import__("harness.evaluate", fromlist=["evaluate"])
@@ -18,7 +18,7 @@ def evaluate_with_harness(original_csv: str, privatized_csv: str, config_path: s
         return {
             "available": False,
             "error": str(exc),
-            "suggestion": "Install or symlink Johnny t0-1.03/src and ensure it is on PYTHONPATH.",
+            "suggestion": "Install or symlink spine/src and ensure it is on PYTHONPATH.",
             "original_csv": original_csv,
             "privatized_csv": privatized_csv,
             "config_path": config_path,

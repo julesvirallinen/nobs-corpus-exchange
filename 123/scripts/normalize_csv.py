@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Normalize CSV columns to ID,Author,Text,HS for Johnny wrapper contract."""
+"""Normalize CSV columns to ID,Author,Text,HS for SPINE wrapper contract."""
 
 from __future__ import annotations
 

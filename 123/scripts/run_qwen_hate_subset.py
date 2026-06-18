@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SPINE = ROOT.parent / "Johnny t0-1.03"
+SPINE = ROOT.parent / "spine"
 SYNTH = SPINE / "data" / "synthetic_dev.csv"
 
 

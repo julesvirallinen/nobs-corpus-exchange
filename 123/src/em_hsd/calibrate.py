@@ -29,7 +29,7 @@ class LocalTradeoffProxy:
     """Local trade-off proxy: a stylometry-overlap privacy estimate combined
     with the REAL hate scorer (unitary/unbiased-toxic-roberta) for utility.
 
-    Not the full Johnny harness (privacy is an n-gram-overlap estimate), but the
+    Not the full SPINE harness (privacy is an n-gram-overlap estimate), but the
     hate/utility axis is the real classifier — no mock scorer.
     """
 

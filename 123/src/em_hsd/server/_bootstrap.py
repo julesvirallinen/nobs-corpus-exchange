@@ -1,7 +1,7 @@
 """Ensure the SPINE source dir is importable before any ``em_hsd`` import.
 
 Importing :mod:`em_hsd` transitively imports :mod:`mechanism` (the SPINE
-package shipped under ``Johnny t0-1.03/src``). That import happens at module
+package shipped under ``spine/src``). That import happens at module
 load time, *before* ``em_hsd``'s own ``spine_bootstrap`` runs, so the spine
 path must already be on ``sys.path``. This module performs that setup using
 only the stdlib — it must not import anything from ``em_hsd``.
@@ -17,7 +17,7 @@ import os
 import sys
 from pathlib import Path
 
-_SIBLING_NAME = "Johnny t0-1.03"
+_SIBLING_NAME = "spine"
 _SIBREL_SRC = "src"
 _ENV_VAR = "EM_HSD_SPINE_PATH"
 
@@ -37,7 +37,7 @@ def ensure_spine_on_path() -> str | None:
 
     Resolution order mirrors :class:`em_hsd.core.paths.SpinePathResolver`:
       1. ``EM_HSD_SPINE_PATH`` env var.
-      2. Sibling ``../Johnny t0-1.03/src`` next to the repo root.
+      2. Sibling ``../spine/src`` next to the repo root.
 
     Returns the resolved path as a string, or ``None`` if not found (in which
     case the spine is assumed to be importable via ``PYTHONPATH`` already).

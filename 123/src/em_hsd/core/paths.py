@@ -11,7 +11,7 @@ import tomllib
 class SpinePathResolver:
     """Resolve the SPINE source directory using multiple strategies."""
 
-    _SIBLING_NAME: str = "Johnny t0-1.03"
+    _SIBLING_NAME: str = "spine"
     _SIBREL_SRC: str = "src"
     _ENV_VAR: str = "EM_HSD_SPINE_PATH"
     _PYPROJECT_TOOL_SECTION: str = "em-hsd-v2"
@@ -23,7 +23,7 @@ class SpinePathResolver:
 
         Resolution order:
           1. ``EM_HSD_SPINE_PATH`` environment variable.
-          2. Sibling directory ``../Johnny t0-1.03/src`` relative to this file.
+          2. Sibling directory ``../spine/src`` relative to this file.
           3. ``[tool.em-hsd-v2] spine-path`` from ``pyproject.toml``.
 
         Raises:

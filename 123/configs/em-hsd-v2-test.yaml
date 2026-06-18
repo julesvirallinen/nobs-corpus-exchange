@@ -26,7 +26,7 @@ normalization:
 
 lexicon:
   source: test
-  path: ../Johnny t0-1.03/data/lexicons/hate_terms.txt
+  path: ../spine/data/lexicons/hate_terms.txt
   test_terms:
     - zibber
     - florbnax

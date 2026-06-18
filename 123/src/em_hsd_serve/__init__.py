@@ -13,7 +13,7 @@ import os
 import sys
 from pathlib import Path
 
-_SIBLING_NAME = "Johnny t0-1.03"
+_SIBLING_NAME = "spine"
 _ENV_VAR = "EM_HSD_SPINE_PATH"
 
 
