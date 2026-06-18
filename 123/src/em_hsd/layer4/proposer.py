@@ -10,12 +10,13 @@ import numpy as np
 from em_hsd.core.config import EmHsdConfig
 from em_hsd.core.resources import ResourceManager
 
-_PARAPHRASE_PROMPT = """Rewrite the post below with different wording and style.
+_PARAPHRASE_PROMPT = """Rewrite the post below in a clearly different writing style while keeping the same meaning and stance.
 Rules:
 - KEEP these terms unchanged in meaning: {protected_list}
 - Do not remove insults or soften offensive content
-- Change distinctive phrasing, openers, and stylistic tics
-- Similar length (±25%)
+- Substantially change the sentence structure and syntax (reorder clauses, change voice) — not just swap synonyms
+- Drop the author's distinctive phrasings, openers and stylistic tics; write it as a different person would
+- Keep it fluent and grammatical, similar length (±25%)
 Output only the rewritten post.
 
 Post: {text}"""
