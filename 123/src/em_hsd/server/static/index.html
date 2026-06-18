@@ -105,6 +105,10 @@
   .footerbar{display:flex;align-items:center;gap:16px;padding:10px 18px;background:var(--dark);color:#aeb3c2;font-family:var(--mono);font-size:11px;flex:none;}
   .footerbar b{color:#fff;background:#262936;border-radius:3px;padding:1px 6px;}
   .detail{background:#f7f8fc;border-top:1px dashed #d8dce8;padding:14px 18px 16px 56px;font-size:12.5px;color:var(--ink2);}
+  /* Raw original is on-device-only — blurred to make clear it is never exposed in production. Hover to reveal (dev/audit only). */
+  .dev-only{filter:blur(4.5px);transition:filter .15s;cursor:help;user-select:none;}
+  .dev-only:hover{filter:none;user-select:text;}
+  .dev-badge{font-size:9px;font-weight:700;letter-spacing:.3px;color:var(--warn);background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:4px;padding:1px 5px;margin-left:6px;text-transform:uppercase;}
 
   /* modal + toast */
   .modal-bg{position:fixed;inset:0;background:rgba(18,20,28,.4);display:flex;align-items:center;justify-content:center;z-index:40;}
@@ -578,7 +582,7 @@ function stepReview(){
     if(!expanded) return tr;
     const detail=`<tr><td colspan="7" class="detail">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
-        <div><div class="label" style="margin-bottom:5px;">ORIGINAL (on-device only)</div><div style="font-size:12.5px;">${esc(r.original)}</div></div>
+        <div><div class="label" style="margin-bottom:5px;">ORIGINAL (on-device only)<span class="dev-badge">dev only · never published</span></div><div class="dev-only" title="On-device raw text — never leaves the device in production. Blurred here; hover to reveal (dev/audit only)." style="font-size:12.5px;">${esc(r.original)}</div></div>
         <div><div class="label" style="margin-bottom:5px;">ANONYMISED (x_priv · published)</div><div style="font-size:12.5px;">${esc(r.x_priv)}</div></div>
       </div>
       <div style="display:flex;gap:24px;margin-top:12px;" class="mono">
