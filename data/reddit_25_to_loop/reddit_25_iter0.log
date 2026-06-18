@@ -1,0 +1,264 @@
+Privatizing: /home/arsham/miniconda3/envs/lum/bin/python -m em_hsd_cli.run --in /tmp/reddit_25_slice.csv --out /tmp/reddit_25_iter0.csv --config configs/em-hsd-v2-qwen-reddit.yaml --utility-backend hf --no-resume
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Skipping import of cpp extensions due to incompatible torch version 2.6.0+cu118 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 21261.35it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 10593.01it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 3254.53it/s]
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 3834.94it/s]
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 14760.14it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 14278.90it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 14636.88it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 16213.53it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 19285.70it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 18683.08it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 11145.92it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 11312.08it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 15907.30it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+  [10/25] changed=10 ~0.01 rows/s
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 15543.91it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 12001.13it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 16548.99it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 11483.89it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 11621.61it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 15229.15it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 13062.72it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 18217.19it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 9707.81it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 9916.78it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+  [20/25] changed=20 ~0.01 rows/s
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 18003.23it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 11727.18it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 14815.13it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 13997.73it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 16867.85it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+  [25/25] changed=25 ~0.01 rows/s
+OK [em-hsd-v2] 25 rows -> /tmp/reddit_25_iter0.csv  (changed in 25 rows)  log: /tmp/reddit_25_iter0.csv.log.jsonl
+diff check PASSED. throughput ~0.01 rows/s.
+
+Harness: /home/arsham/miniconda3/envs/lum/bin/python -m harness.evaluate --original /tmp/tmpuouykv5x/original.csv --privatized /tmp/tmpuouykv5x/privatized.csv --config /home/arsham/NOBS/Johnny t0-1.03/configs/test.yaml --utility-backend hf
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Skipping import of cpp extensions due to incompatible torch version 2.6.0+cu118 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 22150.10it/s]
+[1mRobertaForSequenceClassification LOAD REPORT[0m from: unitary/unbiased-toxic-roberta
+Key                             | Status     |  | 
+--------------------------------+------------+--+-
+roberta.embeddings.position_ids | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+======================================================================
+SPINE offline measurement  (25 rows, utility backend = hf)
+======================================================================
+
+UTILITY (HS classification; higher = better):
+  unitary/unbiased-toxic-roberta             F1 orig=0.675  priv=0.594  agree=0.920
+  ensemble utility:  original=0.675  privatized=0.594
+
+RE-IDENTIFICATION (authorship top-1; lower priv = better privacy):
+  char-ngram-svm           acc orig=1.000  priv=0.720
+
+TRADE-OFF ESTIMATE:
+  utility_ratio  (util_priv / util_orig) = 0.880
+  privacy_ratio  (reid_priv / reid_orig) = 0.720
+  TO = utility_ratio - privacy_ratio      = 0.160
+
+  *** LOCAL APPROXIMATION (not the official score) ***
+  This uses our own probe models. Do NOT overfit to it; the organiser's
+  hidden evaluator differs. See README 'Evaluation honesty'.
+======================================================================
