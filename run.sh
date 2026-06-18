@@ -57,5 +57,7 @@ fi
 
 export EM_HSD_SPINE_PATH="$SPINE_DIR"
 export EM_HSD_ALLOW_DOWNLOADS=1
+# Force CPU when GPU kernels are unavailable (e.g. older GTX cards).
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-}"
 [[ -n "${HF_TOKEN:-}" ]] && export HF_TOKEN
 exec "$VENV/bin/em-hsd-serve" --host "$HOST" --port "$PORT"
