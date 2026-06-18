@@ -20,7 +20,7 @@ from em_hsd.csv_compat import (
     assert_preserved_compat,
     read_csv_compat,
 )
-from em_hsd.interfaces.triage_dp import TriageDPLayer4
+from triage_dp.pipeline import TriageDpPipeline
 from em_hsd.io.audit_io import AuditJsonlWriter
 from em_hsd.resources import init_spine_resources
 from em_hsd.utility_scorer import get_scorer
@@ -105,7 +105,7 @@ def _privatize_row(
     text: str,
     config: EmHsdConfig,
     mode: str,
-    adapter: TriageDPLayer4 | None,
+    adapter: TriageDpPipeline | None,
 ) -> tuple[str, dict]:
     if mode == "triage-dp" and adapter is not None:
         return adapter.sanitize(text, original_text=text)
@@ -166,9 +166,9 @@ def run(
             print(f"ERROR: could not load utility model: {exc}", file=sys.stderr)
             return 4
 
-    adapter: TriageDPLayer4 | None = None
+    adapter: TriageDpPipeline | None = None
     if mode == "triage-dp":
-        adapter = TriageDPLayer4(config)
+        adapter = TriageDpPipeline(config)
 
     log_path = log_path or _default_log_path(out_path)
     ckpt_path = _checkpoint_path(out_path)
