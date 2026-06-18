@@ -2,9 +2,9 @@
 # Use with conda env: em-hsd-qwen  (see scripts/setup_conda_env.sh)
 
 mlm:
-  backend: hash
+  backend: hf
   model: distilroberta-base
-  top_k: 24
+  top_k: 48
   clip: 5.0
   include_original: true
 
@@ -32,8 +32,9 @@ lexicon:
   max_inter_char_gap: 2
 
 saliency:
-  enabled: false
+  enabled: true
   model: unitary/unbiased-toxic-roberta
+  threshold: 0.15
 
 utility:
   backend: hf
@@ -42,6 +43,7 @@ utility:
   label_threshold: 0.5
 
 em_hsd_v2:
+  deployment_mode: standalone
   epsilon_total: 18.0
   epsilon_split: 0.5
   k_generate: 2

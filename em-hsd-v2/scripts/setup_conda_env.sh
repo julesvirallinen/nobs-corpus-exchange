@@ -60,6 +60,9 @@ echo "==> Download Qwen3.5-0.8B-GGUF (llama.cpp; see resources/qwen-run-loclay.m
 python "${ROOT}/scripts/download_qwen_gguf.py" || true
 
 echo ""
+echo "Build llama.cpp if needed:"
+echo "  bash ${ROOT}/scripts/build_llama_cpp.sh"
+echo ""
 echo "Done. Activate with:"
 echo "  conda activate ${ENV_NAME}"
 echo ""

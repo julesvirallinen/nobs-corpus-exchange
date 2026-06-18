@@ -398,6 +398,10 @@ class LlamaServerProposer:
             except Exception as exc:
                 raise RuntimeError(f"llama-server completion failed: {exc}") from exc
             cand = (response.choices[0].message.content or "").strip()
+            if not cand:
+                reasoning = getattr(response.choices[0].message, "reasoning_content", None)
+                if reasoning:
+                    cand = str(reasoning).strip()
             if cand and cand not in seen:
                 seen.add(cand)
                 out.append(cand)

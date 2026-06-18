@@ -205,3 +205,28 @@ def test_composed_mode_external_protected_spans():
         protected_spans=["dummy", "fool"],
     )
     assert set(audit["protected_terms"]) == {"dummy", "fool"}
+
+
+def test_token_sanitize_runs_saliency_when_enabled(cfg, monkeypatch):
+    from em_hsd.token_sanitize import token_sanitize
+    from mechanism.canonicalize import canonicalize_protected
+    from mechanism.tokenize import PROTECTED, WORD
+
+    called = {"n": 0}
+
+    def _fake_apply(segments, config):
+        called["n"] += 1
+        for seg in segments:
+            if seg.kind == WORD and seg.text == "retarded":
+                seg.kind = PROTECTED
+                seg.canonical = seg.text
+                canonicalize_protected(seg)
+
+    monkeypatch.setattr("mechanism.saliency.apply_saliency", _fake_apply)
+    cfg.spine.saliency.enabled = True
+    cfg.spine.rng = make_row_rng(12, run_seed="test")
+
+    x_priv, token_log = token_sanitize("you are retarded", cfg, epsilon_1=9.0)
+    assert called["n"] == 1
+    assert "retarded" in x_priv
+    assert any(e.get("action") == "protected+canonicalised" for e in token_log)

@@ -31,6 +31,12 @@ DEFAULT_URL = (
     "List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/master/en"
 )
 
+# Terms common in IA-HSD / synthetic dev but absent from LDNOOBW.
+IA_HSD_SUPPLEMENT = (
+    "dummy", "doofus", "nitwit", "idiot", "moron", "stupid", "fool",
+    "imbecile", "dimwit", "dumbass", "jackass", "bastard", "bitch",
+)
+
 
 def _write_terms(terms, dest=DEST):
     os.makedirs(os.path.dirname(dest), exist_ok=True)
@@ -56,26 +62,33 @@ def main(argv=None) -> int:
     p.add_argument("--url", default=DEFAULT_URL)
     p.add_argument("--from-file", default=None,
                    help="use a local file instead of downloading")
+    p.add_argument("--no-ia-hsd-supplement", action="store_true",
+                   help="do not merge IA-HSD eval insult terms (dummy, idiot, …)")
     args = p.parse_args(argv)
 
     if args.from_file:
         with open(args.from_file, "r", encoding="utf-8") as fh:
-            _write_terms(fh.readlines())
-        return 0
-    try:
-        print(f"downloading lexicon from {args.url} ...")
-        with urllib.request.urlopen(args.url, timeout=30) as resp:
-            data = resp.read().decode("utf-8", errors="replace")
-        _write_terms(data.splitlines())
-        return 0
-    except Exception as exc:
-        print(
-            f"ERROR: could not download lexicon: {exc}\n"
-            f"Provide one manually at {DEST} (one term per line), or use "
-            "--from-file / --url.",
-            file=sys.stderr,
-        )
-        return 1
+            terms = fh.readlines()
+    else:
+        try:
+            print(f"downloading lexicon from {args.url} ...")
+            with urllib.request.urlopen(args.url, timeout=30) as resp:
+                data = resp.read().decode("utf-8", errors="replace")
+            terms = data.splitlines()
+        except Exception as exc:
+            print(
+                f"ERROR: could not download lexicon: {exc}\n"
+                f"Provide one manually at {DEST} (one term per line), or use "
+                "--from-file / --url.",
+                file=sys.stderr,
+            )
+            return 1
+
+    if not args.no_ia_hsd_supplement:
+        terms.extend(IA_HSD_SUPPLEMENT)
+        print(f"merging {len(IA_HSD_SUPPLEMENT)} IA-HSD supplement terms")
+    _write_terms(terms)
+    return 0
 
 
 if __name__ == "__main__":

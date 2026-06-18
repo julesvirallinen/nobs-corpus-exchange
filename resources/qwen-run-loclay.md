@@ -1254,7 +1254,13 @@ This section maps Unsloth Qwen3.5 local inference to the **EM-HSD 2.0** paraphra
 
 ### EM-HSD quickstart (0.8B GGUF)
 
-**1. Build llama.cpp** (once) — same as [Qwen3.5 Small (0.8B • 2B • 4B • 9B)](#qwen35-small-08b--2b--4b--9b), step 1.
+**1. Build llama.cpp** (once; wraps [Qwen3.5 Small](#qwen35-small-08b--2b--4b--9b) step 1):
+
+```bash
+cd em-hsd-v2
+bash scripts/build_llama_cpp.sh
+# CPU only: GGML_CUDA=OFF bash scripts/build_llama_cpp.sh
+```
 
 **2. Download GGUF + mmproj:**
 
@@ -1263,15 +1269,16 @@ cd em-hsd-v2
 python scripts/download_qwen_gguf.py
 ```
 
-Or manually (Unsloth recommended quant `UD-Q4_K_XL`):
+**2b. Hate lexicon (protected-span detection):**
 
 ```bash
-hf download unsloth/Qwen3.5-0.8B-GGUF \
-  --include "*UD-Q4_K_XL*" \
-  --include "*mmproj-F16*"
+cd "../Johnny t0-1.03"
+python scripts/setup_lexicons.py
 ```
 
-**3. Start llama-server** (terminal 1) — **instruct, non-thinking, general tasks** (0.8B has reasoning **off** by default):
+Creates `data/lexicons/hate_terms.txt` (LDNOOBW + IA-HSD supplement terms like `dummy`, `idiot`). Required for `protection.enabled: true` in EM-HSD configs.
+
+**3. Start llama-server**
 
 ```bash
 cd em-hsd-v2

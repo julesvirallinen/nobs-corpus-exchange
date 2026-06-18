@@ -40,6 +40,11 @@ def token_sanitize(text: str, config: EmHsdConfig, epsilon_1: float) -> Tuple[st
         if seg.kind == PROTECTED:
             canonicalize_protected(seg)
 
+    if spine.saliency.enabled:
+        from mechanism.saliency import apply_saliency
+
+        apply_saliency(segments, spine)
+
     surfaces = [seg.text for seg in segments]
     prefix = [""] * (len(segments) + 1)
     for i, s in enumerate(surfaces):
