@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
-
-SPINE = Path(__file__).resolve().parents[1].parent / "Johnny t0-1.03" / "scripts" / "setup_models.py"
 
 MLM = "distilroberta-base"
+# Multi-label English hate classifier: toxicity (flag), severity-type labels,
+# and identity/target-group labels (drives the Corpus Exchange review categories).
 HATE = "unitary/unbiased-toxic-roberta"
 EMBED = "sentence-transformers/all-MiniLM-L6-v2"
 QWEN = "unsloth/Qwen3.5-2B"

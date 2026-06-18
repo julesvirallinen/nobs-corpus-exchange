@@ -110,6 +110,14 @@ class ProcessRequest(BaseModel):
         description="0 Light · 1 Standard · 2 High · 3 Maximum. Varies the DP seed.",
     )
     run_seed: str = Field(default="corpus", description="Run-level seed label.")
+    classifier: str = Field(
+        default="proxy",
+        description=(
+            "Labelling source: 'proxy' (lexicon-derived, no downloads — default) "
+            "or 'hf' (unitary/unbiased-toxic-roberta multi-label, real category + "
+            "severity). 'hf' falls back to proxy if the model is unavailable."
+        ),
+    )
 
 
 class ProcessedRow(BaseModel):
@@ -122,6 +130,7 @@ class ProcessedRow(BaseModel):
     confidence: float
     confidence_band: str
     severity: str
+    category: str | None = None
     tokens_changed: int
     epsilon_total: float | None
     fallback: bool
@@ -130,12 +139,14 @@ class ProcessedRow(BaseModel):
 class ProcessResponse(BaseModel):
     config: str
     privatization_level: int
+    classifier: str
     count: int
     flagged: int
     flagged_pct: float
     low_confidence: int
     clusters: int
     severity_hist: dict[str, int]
+    category_hist: dict[str, int]
     status_hist: dict[str, int]
     rows: list[ProcessedRow]
 
@@ -148,32 +159,55 @@ def _tokens_changed(original: str, x_priv: str) -> int:
     return diff + abs(len(a) - len(b))
 
 
-def _derive_row(idx: int, original: str, audit: dict[str, Any]) -> ProcessedRow:
-    """Turn one pipeline audit into the record the review table filters on."""
-    p_hate = audit.get("P_hate_original")
-    p = float(p_hate) if p_hate is not None else 0.0
-    flagged = p >= HATE_THRESHOLD
-    # Confidence = the model's probability for the class it predicted (0.5..1).
-    # Rows near 0.5 are the labels most likely wrong — surfaced as low.
-    confidence = round(max(p, 1.0 - p), 3)
+def _confidence_band(confidence: float) -> str:
     if confidence >= 0.85:
-        band = "high"
-    elif confidence >= 0.70:
-        band = "medium"
-    else:
-        band = "low"
+        return "high"
+    if confidence >= 0.70:
+        return "medium"
+    return "low"
+
+
+def _derive_row(
+    idx: int,
+    original: str,
+    audit: dict[str, Any],
+    clf: dict[str, Any] | None = None,
+) -> ProcessedRow:
+    """Build the review record from the DP audit, optionally overlaying the
+    multi-label classifier's flagged/severity/category/confidence labels.
+
+    The DP pipeline always supplies the anonymised ``x_priv`` and privacy
+    budget. When *clf* is given (``classifier='hf'``) its labels drive the
+    review fields; otherwise they are derived from the proxy ``P_hate``.
+    """
+    proxy_p = audit.get("P_hate_original")
     x_priv = str(audit.get("x_priv", ""))
     changed = _tokens_changed(original, x_priv)
-    # Severity is a direct banding of the model's hate probability — display
-    # mapping only, no scoring logic of our own. To be refined later.
-    if not flagged:
-        severity = "none"
-    elif p >= 0.8:
-        severity = "high"
-    elif p >= 0.65:
-        severity = "medium"
+
+    if clf is not None:
+        flagged = bool(clf["flagged"])
+        p_hate = clf["p_hate"]
+        confidence = float(clf["confidence"])
+        severity = clf["severity"]
+        category = clf["category"]
     else:
-        severity = "low"
+        p = float(proxy_p) if proxy_p is not None else 0.0
+        flagged = p >= HATE_THRESHOLD
+        p_hate = proxy_p
+        # Confidence = model probability for the predicted class (0.5..1).
+        confidence = round(max(p, 1.0 - p), 3)
+        # Severity is a direct banding of the proxy hate probability — display
+        # mapping only, no scoring logic of our own.
+        if not flagged:
+            severity = "none"
+        elif p >= 0.8:
+            severity = "high"
+        elif p >= 0.65:
+            severity = "medium"
+        else:
+            severity = "low"
+        category = None
+
     return ProcessedRow(
         id=idx,
         original=original,
@@ -182,12 +216,22 @@ def _derive_row(idx: int, original: str, audit: dict[str, Any]) -> ProcessedRow:
         p_hate_x_priv=audit.get("P_hate_x_priv"),
         flagged=flagged,
         confidence=confidence,
-        confidence_band=band,
+        confidence_band=_confidence_band(confidence),
         severity=severity,
+        category=category,
         tokens_changed=changed,
         epsilon_total=audit.get("epsilon_total"),
         fallback=bool(audit.get("fallback", False)),
     )
+
+
+def _hf_classifier_available() -> bool:
+    """True if the multi-label toxic-roberta classifier can be loaded."""
+    try:
+        from em_hsd.server.classifier import classifier
+    except Exception:
+        return False
+    return classifier.available
 
 
 def list_configs() -> list[str]:
@@ -301,6 +345,11 @@ def create_app() -> FastAPI:
         # produce different anonymisations from the same input.
         run_seed = f"{req.run_seed}-L{req.privatization_level}"
 
+        # Resolve the labelling source. 'hf' uses the real multi-label
+        # classifier when available, otherwise falls back to the proxy.
+        use_hf = req.classifier == "hf" and _hf_classifier_available()
+        applied_classifier = "hf" if use_hf else "proxy"
+
         records: list[ProcessedRow] = []
         for idx, text in enumerate(req.rows):
             stripped = text.strip()
@@ -313,7 +362,12 @@ def create_app() -> FastAPI:
                 raise HTTPException(
                     status_code=500, detail=f"pipeline error on row {idx}: {exc}"
                 ) from exc
-            records.append(_derive_row(idx, text, audit))
+            clf = None
+            if use_hf:
+                from em_hsd.server.classifier import classifier as _clf
+
+                clf = _clf.classify(stripped)
+            records.append(_derive_row(idx, text, audit, clf))
 
         flagged = [r for r in records if r.flagged]
         severity_hist = {
@@ -321,18 +375,24 @@ def create_app() -> FastAPI:
             "medium": sum(1 for r in flagged if r.severity == "medium"),
             "low": sum(1 for r in flagged if r.severity == "low"),
         }
+        category_hist: dict[str, int] = {}
+        for r in flagged:
+            key = r.category or "unassigned"
+            category_hist[key] = category_hist.get(key, 0) + 1
         # Light grouping: distinct anonymised text among flagged rows.
         clusters = len({r.x_priv for r in flagged})
         count = len(records)
         return ProcessResponse(
             config=config_path.name,
             privatization_level=req.privatization_level,
+            classifier=applied_classifier,
             count=count,
             flagged=len(flagged),
             flagged_pct=round(100.0 * len(flagged) / count, 1) if count else 0.0,
             low_confidence=sum(1 for r in records if r.confidence_band == "low"),
             clusters=clusters,
             severity_hist=severity_hist,
+            category_hist=category_hist,
             status_hist={"flagged": len(flagged), "clean": count - len(flagged)},
             rows=records,
         )
