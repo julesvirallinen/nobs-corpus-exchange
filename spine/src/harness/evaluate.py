@@ -1,3 +1,17 @@
+"""Offline measurement harness CLI.
+
+    python -m harness.evaluate --original dev.csv --privatized out.csv \
+        [--utility-backend {proxy,hf}] [--config configs/test.yaml] \
+        [--reident-transformer] [--json report.json]
+
+Reports the utility probe (HS-classification F1/agreement, original vs
+privatised), the re-identification probe (top-1 authorship accuracy, original vs
+privatised) and the LOCAL trade-off estimate.
+
+Author labels are read ONLY here (from the ORIGINAL file) — never by the
+mechanism. This module imports nothing from the mechanism package.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -34,7 +48,9 @@ def _read(path: str, required: List[str]) -> List[Dict[str, str]]:
         return list(reader)
 
 
-def _load_terms(config_path: str) -> List[str]:    if not os.path.exists(config_path):
+def _load_terms(config_path: str) -> List[str]:
+    """Load proxy-lexicon terms from a config (test terms or the lexicon file)."""
+    if not os.path.exists(config_path):
         return []
     with open(config_path, "r", encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh) or {}

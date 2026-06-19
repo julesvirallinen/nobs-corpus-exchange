@@ -1,3 +1,22 @@
+"""Hate-classifier backends for the utility probe.
+
+ARCHITECTURE NOTE: the harness imports NOTHING from the mechanism package. The
+proxy lexicon detector below therefore carries its own small, independent
+obfuscation matcher rather than reusing mechanism.lexicon. Duplication here is
+deliberate — it keeps the evaluation harness decoupled from the thing it
+evaluates (and the mechanism likewise imports nothing from the harness).
+
+Two backends, behind a flag:
+* ``hf``    -- an ensemble of >=2 real open-weight English hate classifiers from
+               HuggingFace (intended evaluation path; needs requirements-hf.txt).
+* ``proxy`` -- two deterministic, dependency-free proxy classifiers. NOT the
+               organiser's evaluator and carry no authority; they exist so the
+               harness runs offline and in tests.
+
+Each classifier exposes ``name`` and ``predict(texts) -> np.ndarray[int]`` with
+labels in {0, 1} (1 == hate/abusive).
+"""
+
 from __future__ import annotations
 
 from typing import List, Sequence
@@ -98,6 +117,8 @@ def _hate_probability(logits, model_config, score_label: str, torch) -> float:
 
 
 class HFHateClassifier:
+    """Wraps one open-weight HF sequence-classification model."""
+
     def __init__(self, model_name: str, score_label: str = _DEFAULT_SCORE_LABEL):
         import torch  # noqa: F401
         from transformers import (AutoModelForSequenceClassification,

@@ -1,3 +1,5 @@
+"""Near-duplicate candidate pruning (PrivRewrite §4.1.3 pattern)."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence

@@ -1,3 +1,5 @@
+"""TO calibration harness skeleton for EM-HSD v2 (mock proxy, no downloads)."""
+
 from __future__ import annotations
 
 import argparse
@@ -116,6 +118,8 @@ def _apply_theta(config: EmHsdConfig, theta: dict[str, float]) -> EmHsdConfig:
 
 
 class CalibrateRunner:
+    """Random-search calibrator using a mock TO proxy."""
+
     def __init__(
         self,
         config: EmHsdConfig,

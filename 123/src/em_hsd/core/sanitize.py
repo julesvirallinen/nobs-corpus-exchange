@@ -1,3 +1,5 @@
+"""Phase 1a: selective ε₁ token sanitization → x^priv."""
+
 from __future__ import annotations
 
 from mechanism import dp
@@ -23,7 +25,9 @@ def _log_entry(seg) -> dict:
     }
 
 
-def _alnum_key(s: str) -> str:    return "".join(c.lower() for c in (s or "") if c.isalnum())
+def _alnum_key(s: str) -> str:
+    """Lowercased alphanumeric key for matching layer token surfaces to segments."""
+    return "".join(c.lower() for c in (s or "") if c.isalnum())
 
 
 def token_sanitize(

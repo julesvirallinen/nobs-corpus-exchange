@@ -1,3 +1,5 @@
+"""CSV compatibility helpers for EM-HSD."""
+
 from __future__ import annotations
 
 import csv
@@ -19,7 +21,9 @@ _EXTRA_KEY = "__extra__"
 csv.field_size_limit(10 * 1024 * 1024)
 
 
-def _resolve_columns(fieldnames: list[str]) -> dict[str, str]:    if not fieldnames:
+def _resolve_columns(fieldnames: list[str]) -> dict[str, str]:
+    """Map canonical column name -> actual header in file."""
+    if not fieldnames:
         raise CsvContractError("empty file or missing header row.")
     lookup = {name: name for name in fieldnames}
     resolved: dict[str, str] = {}
@@ -77,7 +81,9 @@ def write_csv_compat(
     source_fieldnames: list[str],
     rows: list[dict[str, str]],
     column_map: dict[str, str],
-) -> None:    with open(path, "w", encoding="utf-8", newline="") as fh:
+) -> None:
+    """Write rows using the source file's original column names."""
+    with open(path, "w", encoding="utf-8", newline="") as fh:
         writer = csv.DictWriter(
             fh, fieldnames=source_fieldnames, quoting=csv.QUOTE_MINIMAL,
         )
@@ -96,7 +102,9 @@ def append_csv_row_compat(
     column_map: dict[str, str],
     *,
     write_header: bool,
-) -> None:    out = {col: row.get(canonical, "") for canonical, col in column_map.items()}
+) -> None:
+    """Append one privatized row (canonical keys) to an output CSV."""
+    out = {col: row.get(canonical, "") for canonical, col in column_map.items()}
     mode = "w" if write_header else "a"
     with open(path, mode, encoding="utf-8", newline="") as fh:
         writer = csv.DictWriter(
@@ -107,14 +115,18 @@ def append_csv_row_compat(
         writer.writerow({k: out.get(k, "") for k in source_fieldnames})
 
 
-def write_canonical_csv(path: str, rows: list[dict[str, str]]) -> None:    with open(path, "w", encoding="utf-8", newline="") as fh:
+def write_canonical_csv(path: str, rows: list[dict[str, str]]) -> None:
+    """Write ID/Author/Text/HS for harness.evaluate (capitalized contract)."""
+    with open(path, "w", encoding="utf-8", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=CANONICAL_COLUMNS, quoting=csv.QUOTE_MINIMAL)
         writer.writeheader()
         for row in rows:
             writer.writerow({k: row[k] for k in CANONICAL_COLUMNS})
 
 
-def write_canonical_privatized_csv(path: str, rows: list[dict[str, str]]) -> None:    with open(path, "w", encoding="utf-8", newline="") as fh:
+def write_canonical_privatized_csv(path: str, rows: list[dict[str, str]]) -> None:
+    """Write ID/Text for harness.evaluate on privatized output."""
+    with open(path, "w", encoding="utf-8", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=["ID", "Text"], quoting=csv.QUOTE_MINIMAL)
         writer.writeheader()
         for row in rows:
@@ -122,13 +134,17 @@ def write_canonical_privatized_csv(path: str, rows: list[dict[str, str]]) -> Non
 
 
 class DiffCheckError(AssertionError):
+    """Raised when ID/Author/HS are not preserved row-for-row."""
+
 
 def assert_preserved_compat(
     original_path: str,
     output_path: str,
     *,
     completed_rows: int | None = None,
-) -> None:    _, original, _ = read_csv_compat(original_path)
+) -> None:
+    """Diff-check preserved columns; optionally only the first N rows."""
+    _, original, _ = read_csv_compat(original_path)
     _, output, _ = read_csv_compat(output_path)
     if completed_rows is not None:
         original = original[:completed_rows]

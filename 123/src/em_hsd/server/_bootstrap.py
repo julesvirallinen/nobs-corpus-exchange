@@ -1,3 +1,16 @@
+"""Ensure the SPINE source dir is importable before any ``em_hsd`` import.
+
+Importing :mod:`em_hsd` transitively imports :mod:`mechanism` (the SPINE
+package shipped under ``spine/src``). That import happens at module
+load time, *before* ``em_hsd``'s own ``spine_bootstrap`` runs, so the spine
+path must already be on ``sys.path``. This module performs that setup using
+only the stdlib — it must not import anything from ``em_hsd``.
+
+Import this module first, e.g. ``from em_hsd.server import _bootstrap`` is too
+late (it triggers the package import). Instead the launcher imports it as a
+standalone file before touching ``em_hsd``.
+"""
+
 from __future__ import annotations
 
 import os
@@ -9,7 +22,9 @@ _SIBREL_SRC = "src"
 _ENV_VAR = "EM_HSD_SPINE_PATH"
 
 
-def repo_root() -> Path:    # this file: <root>/src/em_hsd/server/_bootstrap.py
+def repo_root() -> Path:
+    """Return the ``123`` package root (the dir containing ``configs/``)."""
+    # this file: <root>/src/em_hsd/server/_bootstrap.py
     return Path(__file__).resolve().parents[3]
 
 

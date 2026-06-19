@@ -1,3 +1,5 @@
+"""Candidate filters for EM-HSD Phase 2."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -30,7 +32,9 @@ def protected_skeletons(terms: Sequence[str]) -> list[str]:
     return [s for s in skels if len(s) >= 3]
 
 
-def extract_protected_terms(text: str, canonicals: Sequence[str]) -> list[str]:    found = []
+def extract_protected_terms(text: str, canonicals: Sequence[str]) -> list[str]:
+    """Return canonical protected terms present in text."""
+    found = []
     lower = (text or "").lower()
     for c in canonicals:
         if not c:

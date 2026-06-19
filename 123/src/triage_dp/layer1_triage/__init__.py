@@ -1,3 +1,5 @@
+"""Layer 1 — Cross-saliency triage (token routing)."""
+
 from __future__ import annotations
 
 from triage_dp.layer1_triage.default import DefaultTriageRouter

@@ -1,3 +1,5 @@
+"""Backward-compatible shim for legacy `em_hsd.generative_proposer` imports."""
+
 from __future__ import annotations
 
 from em_hsd.layer4.proposer import (

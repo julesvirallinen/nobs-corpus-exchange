@@ -1,3 +1,5 @@
+"""Cached resource helpers for EM-HSD pipeline."""
+
 from __future__ import annotations
 
 from mechanism.spine import get_resources
@@ -7,7 +9,9 @@ from em_hsd.core.policy import DownloadPolicy
 from em_hsd.layer4.filter import protected_skeletons
 
 
-def protected_canonicals(text: str, config: EmHsdConfig) -> tuple[list[str], list[str]]:    lexicon, _, _ = get_resources(config.spine)
+def protected_canonicals(text: str, config: EmHsdConfig) -> tuple[list[str], list[str]]:
+    """Return (canonical terms, skeletons) found in text."""
+    lexicon, _, _ = get_resources(config.spine)
     if not lexicon or not lexicon.loaded:
         return [], []
     spans = lexicon.find_protected_spans(text)
@@ -15,7 +19,9 @@ def protected_canonicals(text: str, config: EmHsdConfig) -> tuple[list[str], lis
     return canonicals, protected_skeletons(canonicals)
 
 
-def init_spine_resources(config: EmHsdConfig) -> None:    get_resources(config.spine)
+def init_spine_resources(config: EmHsdConfig) -> None:
+    """Fail early if SPINE backends cannot load."""
+    get_resources(config.spine)
 
 
 class ResourceManager:

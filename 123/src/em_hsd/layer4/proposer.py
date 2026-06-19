@@ -1,3 +1,5 @@
+"""Generative paraphrase proposers (mock + Unsloth Qwen3.5)."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -21,6 +23,8 @@ Post: {text}"""
 
 
 def _tokenize_prompt(tokenizer, formatted: str, device):
+    """Tokenize chat text; Qwen3-VL processors treat positional args as images."""
+
     try:
         inputs = tokenizer(text=formatted, return_tensors="pt")
     except TypeError:
@@ -28,7 +32,9 @@ def _tokenize_prompt(tokenizer, formatted: str, device):
     return inputs.to(device)
 
 
-def _cuda_usable() -> bool:    try:
+def _cuda_usable() -> bool:
+    """Return True only if CUDA kernels can actually run (GTX 1060 / sm_61 may fail)."""
+    try:
         import torch
         if not torch.cuda.is_available():
             return False
@@ -48,6 +54,8 @@ class GenerativeProposer(Protocol):
 
 
 class TransformersQwenProposer:
+    """Qwen paraphrase via HuggingFace transformers (CPU/GPU fallback when Unsloth fails)."""
+
     def __init__(self, config: EmHsdConfig):
         self.config = config
         self._rng: np.random.Generator | None = None
@@ -147,6 +155,8 @@ class TransformersQwenProposer:
 
 
 class UnslothQwenProposer:
+    """Local Qwen3.5 paraphrase via Unsloth FastLanguageModel."""
+
     def __init__(self, config: EmHsdConfig):
         self.config = config
         self._rng: np.random.Generator | None = None

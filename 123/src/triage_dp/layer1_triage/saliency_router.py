@@ -1,3 +1,19 @@
+"""Layer 1 — real cross-saliency triage router.
+
+Occlusion saliency: drop each token, measure the fall in a hate classifier's
+probability, and protect (keep verbatim) the tokens whose removal drops the
+score by at least ``triage_dp.layer1.threshold``. Those become ``Q1`` routes
+with ``protected_override`` so Layer 4 keeps the genuine hate signal in place
+and DP-rewrites the rest. This is the working replacement for
+``NoOpTriageRouter``.
+
+The hate scorer is injectable (any object exposing ``hate_prob(text) -> float``)
+so the routing logic is unit-testable without a model; by default it lazily
+loads :class:`mechanism.saliency.OcclusionSaliency` on the configured
+``saliency.model``. Loading is offline-safe — if the model is unavailable the
+router degrades to no routes (standalone Layer 4) rather than failing.
+"""
+
 from __future__ import annotations
 
 import re
@@ -12,6 +28,8 @@ _WORD = re.compile(r"\S+")
 
 
 class SaliencyTriageRouter:
+    """Cross-saliency triage via occlusion on a hate classifier."""
+
     def __init__(self, scorer: Any | None = None) -> None:
         # ``scorer`` exposes hate_prob(text)->float. None = lazy-load the
         # occlusion classifier on first use.

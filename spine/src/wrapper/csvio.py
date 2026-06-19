@@ -1,3 +1,15 @@
+"""CSV reading/writing that preserves every field except Text byte-for-byte.
+
+The contract: input and output are CSV with columns ID, Author, Text, HS. Only
+Text is replaced (one-to-one, same rows, same order, same count). ID, Author and
+HS field *values* are preserved exactly, including commas, double quotes,
+newlines and emoji inside any field, in UTF-8.
+
+We use the stdlib ``csv`` module with ``newline=""`` and explicit UTF-8 so
+embedded newlines/quotes round-trip correctly. Equality is checked on parsed
+field *values* (the on-disk quoting style may differ but the values do not).
+"""
+
 from __future__ import annotations
 
 import csv
@@ -11,6 +23,8 @@ csv.field_size_limit(10 * 1024 * 1024)
 
 
 class CsvContractError(ValueError):
+    """Raised when the input does not satisfy the ID/Author/Text/HS contract."""
+
 
 def read_csv(path: str) -> Tuple[List[str], List[Dict[str, str]]]:
     """Read the CSV. Returns (fieldnames, rows). Raises CsvContractError on a

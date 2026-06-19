@@ -1,3 +1,9 @@
+"""Layer 2 default implementation.
+
+The default prior returns token routes unchanged. Plug a real Biber-style
+stylometric prior in here when available.
+"""
+
 from __future__ import annotations
 
 from em_hsd.interfaces.mock import NoOpStylometricPrior

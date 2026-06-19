@@ -1,3 +1,5 @@
+"""Backward-compatible shim re-exporting the canonical config loader."""
+
 from __future__ import annotations
 
 from em_hsd.core.config import (

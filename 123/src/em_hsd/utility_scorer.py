@@ -1,3 +1,5 @@
+"""Backward-compatible shim for legacy `em_hsd.utility_scorer` imports."""
+
 from __future__ import annotations
 
 from em_hsd.layer4.scorer import (

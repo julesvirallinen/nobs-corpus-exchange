@@ -1,3 +1,5 @@
+"""JSONL audit writer for EM-HSD CLI runs."""
+
 from __future__ import annotations
 
 import json
@@ -6,6 +8,8 @@ from typing import Any
 
 
 class AuditJsonlWriter:
+    """Append one JSON object per line to an audit file."""
+
     def __init__(self, path: str | None = None, *, append: bool = False):
         self.path = Path(path) if path else None
         self._append = append

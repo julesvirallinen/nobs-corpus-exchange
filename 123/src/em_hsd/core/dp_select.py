@@ -1,3 +1,5 @@
+"""Exponential mechanism selection with optional custom sensitivity."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence

@@ -1,3 +1,17 @@
+"""The local trade-off estimate.
+
+    TO = (Utility_privatized / Utility_original)
+       - (Privacy_privatized / Privacy_original)
+
+where Utility is ensemble HS-classification macro-F1 (higher = better) and
+Privacy is the re-identification attacker's top-1 accuracy (LOWER = better, so a
+SMALLER privacy ratio is better and RAISES TO).
+
+IMPORTANT: TO is a LOCAL APPROXIMATION of the organiser's hidden evaluator, not
+the official score. It is computed from our own probe models and must not be
+overfit to. See README "Evaluation honesty".
+"""
+
 from __future__ import annotations
 
 from typing import Dict

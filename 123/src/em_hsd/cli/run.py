@@ -1,3 +1,5 @@
+"""CSV CLI for EM-HSD 2.0 and TRIAGE-DP Layer 4 (backward-compatible entrypoint)."""
+
 from __future__ import annotations
 
 import argparse
@@ -51,7 +53,9 @@ def _resume_state(
     out_path: str,
     log_path: str,
     resume: bool,
-) -> tuple[int, int]:    ckpt_path = _checkpoint_path(out_path)
+) -> tuple[int, int]:
+    """Return (start_index, n_changed). Validates partial output when resuming."""
+    ckpt_path = _checkpoint_path(out_path)
     if not resume or not os.path.exists(ckpt_path):
         return 0, 0
 

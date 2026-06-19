@@ -1,3 +1,18 @@
+"""Re-identification (stylometry) probes — attacker models.
+
+Probe A (always on): character n-gram TF-IDF + linear SVM authorship classifier,
+trained on the ORIGINAL Text with Author labels, then asked to re-identify the
+author of each PRIVATISED Text. Lower privatised accuracy = better privacy.
+
+Probe B (optional, --reident-transformer, slower, HF-gated): a frozen
+transformer linear-probe — mean-pooled embeddings + logistic regression — as a
+stronger, learned stylometric attacker. (Full fine-tuning is heavier; this is the
+bounded, documented version.)
+
+Both report top-1 accuracy on original (an upper bound / sanity check) vs
+privatised. This is the only module besides evaluate.py that uses Author labels.
+"""
+
 from __future__ import annotations
 
 from typing import Dict, List, Sequence
@@ -37,7 +52,9 @@ def char_ngram_reident(original_texts: Sequence[str],
 def transformer_reident(original_texts: Sequence[str],
                         privatized_texts: Sequence[str],
                         authors: Sequence[str],
-                        model_name: str = "distilroberta-base") -> Dict:    import torch
+                        model_name: str = "distilroberta-base") -> Dict:
+    """Optional, slower, HF-gated frozen-feature linear-probe attacker."""
+    import torch
     from sklearn.linear_model import LogisticRegression
     from transformers import AutoModel, AutoTokenizer
 

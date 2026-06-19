@@ -1,3 +1,19 @@
+"""Hate / salient term lexicon with obfuscation-aware matching.
+
+A term such as ``zibber`` is compiled into a regex that also matches leetspeak
+(``z1bb3r``), spacing (``z i b b e r``) and character repetition (``ziiibber``).
+Matching yields ``(start, end, canonical)`` spans on the *raw* text so the
+orchestrator can carve them out atomically and replace each with its canonical
+lexicon form (de-leeted, de-spaced, de-elongated, lowercased).
+
+Real lexicons are downloaded by scripts/setup_lexicons.py and are NOT committed
+(they may contain slurs, and the repo is public). When ``source: real`` but the
+file is absent, the lexicon loads empty and reports it; the pipeline still runs
+and protects nothing (logged loudly).
+
+This module never sees CSV columns; it only ever receives a Text string.
+"""
+
 from __future__ import annotations
 
 import os
@@ -37,7 +53,9 @@ def skeleton(token: str) -> str:
     return "".join(out)
 
 
-def _term_body(term: str, max_gap: int) -> str:    parts = []
+def _term_body(term: str, max_gap: int) -> str:
+    """Regex body matching an obfuscated spelling of ``term`` (no anchors)."""
+    parts = []
     for ch in term:
         low = ch.lower()
         if low.isalpha():
@@ -59,6 +77,8 @@ class _Chunk:
 
 
 class Lexicon:
+    """Compiled, obfuscation-aware term matcher."""
+
     def __init__(self, terms: List[str], max_inter_char_gap: int = 2,
                  source_note: str = ""):
         # Normalise + dedupe canonical terms, preserving order.

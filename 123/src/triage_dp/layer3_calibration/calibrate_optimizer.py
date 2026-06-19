@@ -1,3 +1,16 @@
+"""Layer 3 — trade-off calibration optimizer.
+
+Wraps :class:`em_hsd.calibrate.CalibrateRunner` (random search over ε_total /
+hate_floor_delta / tau_sem_min against a local trade-off proxy) as a
+:class:`~em_hsd.interfaces.triage.TOOptimizer`, so the composed pipeline tunes
+Layer 4 hyperparameters on a small dev set instead of returning the NoOp empty
+config.
+
+Honest scope: the trade-off proxy in ``calibrate.py`` is a deterministic
+stand-in, not the SPINE harness. With no dev rows there is nothing to
+calibrate, so it returns an empty :class:`OptimizedConfig` (Layer 4 defaults).
+"""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -10,6 +23,8 @@ _DEFAULT_TRIALS = 20
 
 
 class CalibrateTOOptimizer:
+    """Random-search trade-off calibrator (real, dev-set driven)."""
+
     def __init__(self, trials: int | None = None, seed: int = 0) -> None:
         self._trials = trials
         self._seed = seed

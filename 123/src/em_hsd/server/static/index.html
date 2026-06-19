@@ -134,11 +134,11 @@
   <div class="rail">
     <span class="logo"></span>
     <button data-tab="library" title="Corpus library">▦</button>
-    <button data-tab="trends" title="Trends explorer">↗</button>
+    <button data-tab="trends" title="Trends explorer">📈</button>
     <button data-tab="country" title="Country deep-dive">◵</button>
     <button data-tab="access" title="Access &amp; sharing">⊕</button>
     <button data-tab="flow" title="Process &amp; validate">✓</button>
-    <span class="me">NS</span>
+    <span class="me">RN</span>
   </div>
 
   <div class="main">
@@ -149,7 +149,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:9px;">
         <span style="display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);border:1px solid var(--line2);border-radius:7px;padding:6px 11px;background:#fff;">Command <span class="kbd">⌘K</span></span>
-        <span style="font-size:12.5px;font-weight:600;color:var(--ink2);">Dr. Nob S.</span>
+        <span style="font-size:12.5px;font-weight:600;color:var(--ink2);">Renaissance Numérique</span>
         <span class="tag-green">HSD client</span>
       </div>
     </div>
@@ -458,11 +458,11 @@ function stepUpload(){
   const p=PRIV[S.privLevel];
   const has=!!S.file;
   const procSteps=[
-    {label:"Identify hate tokens", meta:"occlusion saliency · Δhate per word"},
-    {label:"Flag author signals", meta:"Biber stylometric priors"},
-    {label:"Score & label", meta:"unbiased-toxic-roberta"},
-    {label:"Generate rewrites", meta:"Qwen2.5 · k candidates"},
-    {label:"Select privately", meta:"exponential mechanism · ε₁ + ε₂"},
+    {label:"Strip personal identifiers (PII)", meta:"names, handles, emails"},
+    {label:"Normalise dialect & spelling", meta:"slang, elongation"},
+    {label:"Label & score hate categories", meta:"unbiased-toxic-roberta"},
+    {label:"Cluster near-duplicates", meta:"k-anonymity floor"},
+    {label:"Apply differential privacy", meta:"ε per message"},
   ];
   const running=S.proc==="running", done=S.proc==="done";
   const stepHtml=procSteps.map((s,i)=>{
@@ -475,7 +475,7 @@ function stepUpload(){
   const cta = done?"Go to overview →":(running?"Processing…":(has?"Process on-device":"Choose a file first"));
   return `<div class="wrap" style="max-width:1080px;">
     <h2 class="title">Upload &amp; process a corpus</h2>
-    <p class="lede">The HSD client runs on your device: hate tokens identified, rewrites generated and selected under differential privacy before anything is shared. Raw text never leaves your machine — only the anonymised, audited result is published.</p>
+    <p class="lede">The HSD client runs on your device: PII stripped, dialect normalised, labelled &amp; clustered before anything is shared. Raw text never leaves your machine — only the anonymised, audited result is published.</p>
     <div style="display:flex;gap:20px;align-items:flex-start;">
       <div style="flex:1;">
         <div class="drop" id="drop" data-act="pickFile">
@@ -501,7 +501,7 @@ function stepUpload(){
             <span style="font-size:13.5px;font-weight:700;">Privatisation level</span>
             <span class="mono" style="font-size:12.5px;font-weight:600;color:var(--accent);">${p.name}</span>
           </div>
-          <div style="font-size:12px;color:#8b909e;margin-bottom:14px;">One control trades utility for privacy — adjusts the DP budget (ε), semantic similarity threshold, and candidate generation temperature together.</div>
+          <div style="font-size:12px;color:#8b909e;margin-bottom:14px;">One control trades utility for privacy — sets PII threshold, k-anonymity floor and the differential-privacy budget together.</div>
           <input type="range" min="0" max="3" step="1" value="${S.privLevel}" data-act="priv">
           <div style="display:flex;justify-content:space-between;" class="mono"><span style="font-size:10.5px;color:var(--faint)">Light</span><span style="font-size:10.5px;color:var(--faint)">Standard</span><span style="font-size:10.5px;color:var(--faint)">High</span><span style="font-size:10.5px;color:var(--faint)">Maximum</span></div>
           <div style="margin-top:14px;display:flex;gap:10px;font-size:12px;">
@@ -516,6 +516,7 @@ function stepUpload(){
         <div style="padding:6px 16px 14px;">
           ${stepHtml}
           <button class="btn" style="width:100%;margin-top:14px;" data-act="${done?'goOverview':'process'}" ${(!has||running)?"disabled":""}>${esc(cta)}</button>
+          <div style="margin-top:11px;font-size:11px;color:var(--faint);line-height:1.5;">Runs the real TRIAGE-DP pipeline (Layers 1–4) locally via <span class="mono">/api/process</span>. Real models (Qwen generation + toxic-roberta) — loaded from cache.</div>
         </div>
       </div>
     </div>
@@ -709,7 +710,7 @@ function viewLibrary(){
     <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;">
       <div><h2 class="title">Corpus library</h2><p class="lede" style="margin:0;">Anonymised election hate-speech corpuses shared across 14 Council of Europe member states.</p></div>
     </div>
-
+    ${mockBanner("This library view is a static prototype. The live, wired flow is under ▸ Process & validate.")}
     <div class="grid3">${cards}</div>
   </div>`;
 }
@@ -923,12 +924,12 @@ function viewCountry(){
   </div>`;
 }
 function viewAccess(){
-  const people=[["Dr. Nob S.","Owner · full control","Owner","#3b5bdb","#eef1fc"],["CNRS · Médialab","Anonymised corpus, by request","Researcher","#2f7d57","#e8f3ec"],["EU DisinfoLab","Aggregated stats only","Viewer","#5b6170","#f1f2f6"],["Council of Europe","Aggregated stats only","Viewer","#5b6170","#f1f2f6"]];
+  const people=[["Renaissance Numérique","Owner · full control","Owner","#3b5bdb","#eef1fc"],["CNRS · Médialab","Anonymised corpus, by request","Researcher","#2f7d57","#e8f3ec"],["EU DisinfoLab","Aggregated stats only","Viewer","#5b6170","#f1f2f6"],["Council of Europe","Aggregated stats only","Viewer","#5b6170","#f1f2f6"]];
   const rows=people.map(p=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #f4f5f8;"><div><div style="font-size:13.5px;font-weight:600;">${p[0]}</div><div style="font-size:12px;color:var(--faint);margin-top:1px;">${p[1]}</div></div><span style="font-size:11px;font-weight:700;color:${p[3]};background:${p[4]};border-radius:99px;padding:4px 11px;">${p[2]}</span></div>`).join("");
   return `<div class="wrap" style="max-width:880px;">
     <h2 class="title">Access &amp; sharing</h2>
     <p class="lede">You stay the corpus owner. Any legal request for underlying raw data comes to you — the Observatory only ever holds the anonymised result.</p>
-
+    ${mockBanner("Prototype access list.")}
     <div class="card" style="overflow:hidden;"><div style="padding:13px 16px;border-bottom:1px solid #eef0f4;font-size:13px;font-weight:700;">Who has access</div>${rows}</div>
   </div>`;
 }

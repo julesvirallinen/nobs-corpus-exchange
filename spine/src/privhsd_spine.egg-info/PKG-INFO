@@ -1,0 +1,237 @@
+Metadata-Version: 2.4
+Name: privhsd-spine
+Version: 0.1.0
+Summary: SPINE: a text privatization mechanism for the PrivHSD challenge (utility-preserving, re-identification-reducing rewrite of English Reddit posts).
+License: Apache-2.0
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: numpy
+Requires-Dist: scikit-learn
+Requires-Dist: pyyaml
+Requires-Dist: regex
+Provides-Extra: hf
+Requires-Dist: torch; extra == "hf"
+Requires-Dist: transformers; extra == "hf"
+Provides-Extra: test
+Requires-Dist: pytest; extra == "test"
+
+# SPINE — text privatization for PrivHSD
+
+SPINE rewrites English Reddit posts so that **hate-speech-classification utility
+is preserved** while **authorship re-identifiability (stylometry) is reduced**.
+Built for the PrivHSD challenge (Council of Europe Democracy Hackathon 2026).
+
+The input and output are CSV files with columns `ID, Author, Text, HS`. SPINE
+replaces `Text` in place, one row for one row, and preserves `ID`, `Author` and
+`HS` byte-for-byte. The rewriting mechanism is **architecturally unable to see
+`ID`, `Author` or `HS`** — it receives only the `Text` string.
+
+> **Privacy claim, stated narrowly (read this).** The exponential-mechanism
+> selection step satisfies **ε-differential privacy per rewritten token with
+> respect to the clipped MLM logits**. Composition across tokens is sequential
+> and is reported as per-token ε plus token counts. The normalisation and
+> canonicalisation steps are **empirical obfuscation with no formal guarantee**.
+> SPINE does **not** claim formal end-to-end, document-level DP. See
+> [Privacy claim](#privacy-claim-narrow-and-exact).
+
+## What it does, per row (the "spine")
+
+1. **Style normalisation** (deterministic, no model): lowercase; normalise
+   punctuation/whitespace/emoji; repair elongation (`sooo`→`so`); fix common
+   informal spellings. Every change is logged.
+2. **Salient-token identification**: mark hate-carrying tokens with an
+   obfuscation-aware hate lexicon (leetspeak, spacing, repeats), and optionally
+   with token saliency from a small open-weight hate classifier (config flag).
+3. **Protect & canonicalise**: protected tokens are *kept* but mapped to their
+   canonical surface form (de-leet, de-space, de-elongate, lowercase) — the
+   classifier still sees the slur *category*; the attacker does not see *this
+   writer's* idiosyncratic spelling.
+4. **DP rewrite of the remainder**: for each non-protected content token, mask
+   it, obtain masked-language-model logits, **clip** them to a bounded range,
+   and **sample via the exponential mechanism** (softmax at ε-scaled
+   temperature). This is the DP-MLM construction of Meisenbacher et al.
+   ([arXiv:2407.00637](https://arxiv.org/abs/2407.00637)). The budget is uneven
+   and config-driven (protected / function words / content map to ε or `skip`).
+5. **Reassemble & log**: every input token is accounted for in a per-token JSONL
+   log (original, action, ε spent, replacement, reason), keyed by row index,
+   never by author.
+
+## Install
+
+Python 3.10+. CPU only — no GPU is assumed.
+
+**Core (small, no model downloads).** Runs the full pipeline, the harness, the
+whole test suite and `verify.sh` using the deterministic `hash` MLM backend and
+the lexicon-proxy classifiers:
+
+```bash
+python -m venv .venv && . .venv/bin/activate    # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+pip install -e .
+```
+
+**Real open-weight models (the intended evaluation path).** Adds a real masked
+language model for the DP rewrite and a real hate-classifier ensemble for the
+harness:
+
+```bash
+pip install -r requirements-hf.txt
+python scripts/setup_models.py        # one-time download (CPU wheels are fine)
+python scripts/setup_lexicons.py      # download a real hate/abuse lexicon (NOT committed)
+```
+
+No hosted or closed model APIs are used anywhere. All models are small, local,
+open-weight, and pinned (see `requirements*.txt`).
+
+## Quickstart (synthetic data)
+
+A synthetic dev set in the exact schema lives at
+[`data/synthetic_dev.csv`](data/synthetic_dev.csv) (regenerate with
+`python scripts/make_synthetic.py`).
+
+```bash
+# 1. privatise (deterministic core path: hash backend + test lexicon)
+python -m wrapper.run --in data/synthetic_dev.csv --out out.csv \
+    --mode spine --config configs/test.yaml
+
+# 2. measure locally (utility, re-identification, trade-off estimate)
+python -m harness.evaluate --original data/synthetic_dev.csv --privatized out.csv \
+    --config configs/test.yaml
+```
+
+Modes: `identity` (passthrough plumbing test), `dpmlm` (plain DP-MLM baseline —
+uniform budget, no protection step), `spine` (the full mechanism).
+
+The wrapper runs the diff check automatically after writing and **fails loudly**
+if any of `ID/Author/HS` changed or the row count/order drifted.
+
+## Pointing at the real dev CSV when it arrives
+
+The real dev set has the same schema. Use the real-model config and the real
+downloaded lexicon:
+
+```bash
+pip install -r requirements-hf.txt
+python scripts/setup_models.py
+python scripts/setup_lexicons.py                 # or drop your own term list at data/lexicons/hate_terms.txt
+
+python -m wrapper.run --in dev.csv --out dev_private.csv \
+    --mode spine --config configs/default.yaml   # mlm.backend: hf, real lexicon
+
+python -m harness.evaluate --original dev.csv --privatized dev_private.csv \
+    --config configs/default.yaml --utility-backend hf
+```
+
+`configs/default.yaml` (real MLM) and `configs/fast.yaml` (deterministic `hash`
+backend, otherwise identical) differ only in `mlm.backend`. The synthetic data's
+placeholder terms live in the **test** lexicon, so pair synthetic runs with
+`configs/test.yaml` and real runs with `configs/default.yaml`.
+
+## Config & the noise dial
+
+The privacy/utility dial is `epsilon.*` in the config — the main thing to tune
+between submissions, **no code changes required**. Each token class maps to a
+positive ε (spent on that class's exponential-mechanism draw) or `skip` (kept
+as-is). **Lower ε = more noise = stronger per-token privacy, lower utility.**
+
+```yaml
+epsilon:
+  protected: skip      # hate-carrying tokens: canonicalised, never resampled
+  function_word: skip  # function/stop words: kept to preserve grammar
+  content: 6.0         # the style-bearing remainder  <-- THE DIAL
+  default: 6.0
+mlm:
+  backend: hf          # hf (real MLM) | hash (deterministic, no download)
+  model: distilroberta-base
+  top_k: 48            # candidate-set size for the exponential mechanism
+  clip: 5.0            # logit clip magnitude C; scores live in [-C, C]
+```
+
+To privatise more aggressively, lower `epsilon.content` (e.g. `3.0`, `1.0`); to
+preserve more utility, raise it. `dpmlm` mode ignores the protection step and
+spends `epsilon.content` uniformly on every content/function token.
+
+## Module map
+
+```
+src/mechanism/   the spine (receives ONLY Text; never sees other columns)
+  tokenize.py      lossless word/url/mention/hashtag/sep segmentation
+  normalize.py     deterministic style normalisation (idempotent, logged)
+  lexicon.py       obfuscation-aware hate-term matching (leet/spacing/repeats)
+  salient.py       token classification (protected/function/number/content)
+  canonicalize.py  protected tokens -> canonical surface form
+  mlm.py           MLM backends: HFMaskedLM (real) | HashMLM (deterministic)
+  dp.py            logit clipping + exponential mechanism (the DP step)
+  rng.py           per-row seed policy (see SEED_POLICY.md)
+  saliency.py      optional classifier saliency (off by default, HF-gated)
+  spine.py         orchestrator: privatize(text, config) -> (new_text, log)
+src/wrapper/     CSV IO + CLI + the preservation diff check
+src/harness/     offline measurement (the ONLY code that reads Author)
+  classifiers.py   hate-classifier ensemble (hf | proxy); decoupled from mechanism
+  utility.py       HS-classification F1 / agreement, original vs privatised
+  reident.py       char n-gram TF-IDF + linear SVM (+ optional transformer probe)
+  tradeoff.py      the LOCAL trade-off estimate
+  evaluate.py      CLI
+src/stretch/     scaffold: candidate-selection layer (EM selection implemented;
+                 generative proposer NotImplemented by design)
+```
+
+Boundaries are enforced by tests: the mechanism imports nothing from the harness
+or wrapper and never references the `Author` column; the harness imports nothing
+from the mechanism.
+
+## Privacy claim (narrow and exact)
+
+- The **exponential-mechanism selection** of a replacement token (in
+  `dp.py`) satisfies **ε-DP with respect to the clipped logit score vector**:
+  scores are clipped to `[-C, C]` (so the score range / sensitivity is `Δ = 2C`)
+  and candidate `i` is sampled with probability `∝ exp(ε · uᵢ / (2Δ))`. Clipping
+  is always applied before the softmax.
+- **Composition** across rewritten tokens is **sequential**; we report **per-token
+  ε plus token counts** in the JSONL log (we do not collapse them into a single
+  document-level ε).
+- **Normalisation and canonicalisation** are **empirical obfuscation with no
+  formal privacy guarantee**. They reduce idiosyncratic-spelling leakage but are
+  not part of any ε.
+- We do **not** claim formal end-to-end, document-level differential privacy.
+
+Baseline reference: **Meisenbacher, Markus, et al., "DP-MLM"**,
+[arXiv:2407.00637](https://arxiv.org/abs/2407.00637). No other claims here are
+uncited.
+
+## Evaluation honesty
+
+The harness prints a **local trade-off estimate**
+
+```
+TO = (Utility_privatized / Utility_original) − (Privacy_privatized / Privacy_original)
+```
+
+where Utility is ensemble HS-classification macro-F1 (higher is better) and
+Privacy is the re-identification attacker's top-1 accuracy (lower is better).
+
+**This is a LOCAL APPROXIMATION of the organiser's hidden evaluator, not the
+official score.** It is computed from *our own* probe models. **Do not overfit to
+it.** Improving these specific probe numbers (e.g. by tuning against our SVM or
+our proxy classifiers) does not guarantee improvement on the hidden evaluator and
+may hurt it. Treat the estimate as a smoke signal and a relative comparison
+between configs, never as a target to maximise.
+
+## Verify
+
+```bash
+PYTHON=.venv/Scripts/python.exe bash scripts/verify.sh   # or: bash scripts/verify.sh
+```
+
+Runs the full pytest suite, all three modes end-to-end on synthetic data, the
+harness on each output, and two consecutive production spine runs (Text differs,
+other columns stable). Observed results are recorded in
+[VERIFICATION.md](VERIFICATION.md). Runtime throughput may be printed but is not
+a documented claim.
+
+## Safety note on data
+
+The real data contains offensive language. This repo is **public**: it commits
+**no real slurs**. Test fixtures and the synthetic data use only mild insults and
+made-up placeholder tokens registered in a test lexicon (`configs/test.yaml`).
+Real lexicons are downloaded at setup and are git-ignored.

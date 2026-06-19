@@ -1,3 +1,15 @@
+"""Deterministic, model-free style normalisation.
+
+Operates on the Segment stream produced by tokenize.segment(). Word segments are
+lowercased, de-elongated (sooo -> so) and run through a small misspelling map.
+Separator segments have emoji stripped, smart punctuation flattened, repeated
+punctuation collapsed and whitespace collapsed. Every change is recorded on the
+segment so the per-token log can report it.
+
+The transform is idempotent: ``normalize_text(normalize_text(x)) ==
+normalize_text(x)`` (enforced by a unit test).
+"""
+
 from __future__ import annotations
 
 from typing import List, Tuple
@@ -55,7 +67,9 @@ def normalize_sep(text: str, cfg: Config) -> str:
     return n
 
 
-def normalize_word(text: str, cfg: Config) -> Tuple[str, List[str]]:    reasons: List[str] = []
+def normalize_word(text: str, cfg: Config) -> Tuple[str, List[str]]:
+    """Return (normalised_word, list_of_change_reasons)."""
+    reasons: List[str] = []
     n = text
     if cfg.normalization.lowercase:
         low = n.lower()

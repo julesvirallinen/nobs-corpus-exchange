@@ -1,3 +1,5 @@
+"""No-download policy gate for EM-HSD development."""
+
 from __future__ import annotations
 
 import os

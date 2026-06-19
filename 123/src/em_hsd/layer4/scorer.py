@@ -1,3 +1,5 @@
+"""Hate utility scorer for candidate selection (standalone; no harness imports)."""
+
 from __future__ import annotations
 
 from em_hsd.core.config import EmHsdConfig
@@ -34,6 +36,7 @@ def _score_from_logits(logits, model_config, score_label: str, torch) -> float:
 
 
 class HFToxicityScorer:
+    """Open-weight toxicity classifier probability in [0, 1]."""
 
     def __init__(self, model_name: str, score_label: str = "toxicity"):
         import torch

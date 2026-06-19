@@ -1,3 +1,5 @@
+"""Backward-compatible shim for legacy `em_hsd.csv_compat` imports."""
+
 from __future__ import annotations
 
 from em_hsd.io.csv_io import (
