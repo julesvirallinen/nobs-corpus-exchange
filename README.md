@@ -7,6 +7,8 @@ clickable demo: http://136.114.94.183:8000 (pre-calculated LLM processing, live 
 
 https://github.com/user-attachments/assets/e04ba134-6ca2-488c-accc-bdb789c655dc
 
+NOTE: 2026-06-19T8:00:00 It seems that the main branch contains a couple broken docstrings. The server demo was deployed before the deadline, and is our final submission. https://github.com/julesvirallinen/nobs-corpus-exchange/tree/working has the working version, if anyone wants to run the algorithm locally, equal to what is deployed to the final submission. 
+
 
 
 ## Anonymization algorithm
